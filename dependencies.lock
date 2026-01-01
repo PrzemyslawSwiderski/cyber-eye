@@ -1,0 +1,322 @@
+dependencies:
+  espp/base_component:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__base_component
+      type: local
+    version: 1.0.33
+  espp/cli:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__cli
+      type: local
+    version: 1.0.33
+  espp/file_system:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__file_system
+      type: local
+    version: 1.0.33
+  espp/format:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__format
+      type: local
+    version: 1.0.33
+  espp/ftp:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__ftp
+      type: local
+    version: 1.0.33
+  espp/logger:
+    component_hash: 91bc16342ba44200df5b56977270921a863e3447d3c94049a75e30b8d515b34d
+    dependencies:
+    - name: espp/format
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.33
+  espp/socket:
+    component_hash: 980328b42f03da0863dcb2d9c7c99021dd5880dde72a04b5e1e470c11bf705b7
+    dependencies:
+    - name: espp/base_component
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: espp/task
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.33
+  espp/task:
+    component_hash: 82c7bbafb07f7e7f2e5b4813ad3a03c48458dcb0027c19ef8c834ef91771ff49
+    dependencies:
+    - name: espp/base_component
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.33
+  espp/wifi:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__wifi
+      type: local
+    version: 1.0.33
+  espressif/cjson:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__cjson
+      type: local
+    version: 1.7.19
+  espressif/dl_fft:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__dl_fft
+      type: local
+    version: 0.3.1
+  espressif/eppp_link:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__eppp_link
+      type: local
+    version: 1.1.4
+  espressif/esp-dsp:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp-dsp
+      type: local
+    version: 1.6.0
+  espressif/esp-sr:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp-sr
+      type: local
+    version: 2.1.5
+  espressif/esp_audio_codec:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_audio_codec
+      type: local
+    version: 2.3.0
+  espressif/esp_audio_effects:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_audio_effects
+      type: local
+    version: 1.1.0
+  espressif/esp_board_manager:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_board_manager
+      type: local
+    version: 0.4.8
+  espressif/esp_codec_dev:
+    component_hash: 0d9e9bc288156eb55f79338d312e1ebf8c9dfbd5e7d13ef0f20ccb031b4e15cf
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.5.4
+  espressif/esp_h264:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_h264
+      type: local
+    version: 1.2.0~1
+  espressif/esp_hosted:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_hosted
+      type: local
+    version: 2.8.3
+  espressif/esp_image_effects:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_image_effects
+      type: local
+    version: 1.0.1
+  espressif/esp_new_jpeg:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_new_jpeg
+      type: local
+    version: 1.0.0
+  espressif/esp_serial_slave_link:
+    component_hash: ac1776806de0a6e371c84e87898bb983e19ce62aa7f1e2e5c4a3b0234a575d2c
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.2
+  espressif/esp_video_codec:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_video_codec
+      type: local
+    version: 0.5.3
+  espressif/esp_wifi_remote:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_wifi_remote
+      type: local
+    version: 1.2.2
+  espressif/gmf_ai_audio:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_ai_audio
+      type: local
+    version: 0.7.4
+  espressif/gmf_app_utils:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_app_utils
+      type: local
+    version: 0.7.7
+  espressif/gmf_audio:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_audio
+      type: local
+    version: 0.7.2
+  espressif/gmf_core:
+    component_hash: c93ce72be18e9c86380a0ce65929c23eb377c853fc58a888889e58b3f3624aed
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.7.9
+  espressif/gmf_io:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_io
+      type: local
+    version: 0.7.6
+  espressif/gmf_loader:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_loader
+      type: local
+    version: 0.7.3
+  espressif/gmf_misc:
+    component_hash: 2e03ac6fcd5738e9f21b35f9ff7c353713a43e62bb4e77504d53fc5fb50666f3
+    dependencies:
+    - name: espressif/gmf_core
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=0.7'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.7.0
+  espressif/gmf_video:
+    component_hash: f846518801ae7e748ecde24e5ac4b21518ca42fffb533b9d9d67a4cd7ed2c3b8
+    dependencies:
+    - name: espressif/esp_image_effects
+      registry_url: https://components.espressif.com
+      require: private
+      version: ~1.0.0
+    - name: espressif/esp_video_codec
+      registry_url: https://components.espressif.com
+      require: private
+      version: ~0.5.2
+    - name: espressif/gmf_core
+      registry_url: https://components.espressif.com
+      require: private
+      version: ~0.7.0
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.7.1
+  espressif/wifi_remote_over_eppp:
+    component_hash: e1b4c485ed5afe36615b9b555dfdcbe4be33898dc3732b5bedf235bba45bd286
+    dependencies:
+    - name: espressif/eppp_link
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=0.1'
+    - name: idf
+      require: private
+      version: '>=5.3'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.3.0
+  idf:
+    source:
+      type: idf
+    version: 5.5.2
+  joltwallet/littlefs:
+    component_hash: 8e12955f47e27e6070b76715a96d6c75fc2b44f069e8c33679332d9bdd3120c4
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.20.1
+direct_dependencies:
+- espp/base_component
+- espp/cli
+- espp/file_system
+- espp/format
+- espp/ftp
+- espp/logger
+- espp/socket
+- espp/task
+- espp/wifi
+- espressif/cjson
+- espressif/dl_fft
+- espressif/eppp_link
+- espressif/esp-dsp
+- espressif/esp-sr
+- espressif/esp_audio_codec
+- espressif/esp_audio_effects
+- espressif/esp_board_manager
+- espressif/esp_codec_dev
+- espressif/esp_h264
+- espressif/esp_hosted
+- espressif/esp_image_effects
+- espressif/esp_new_jpeg
+- espressif/esp_serial_slave_link
+- espressif/esp_video_codec
+- espressif/esp_wifi_remote
+- espressif/gmf_ai_audio
+- espressif/gmf_app_utils
+- espressif/gmf_audio
+- espressif/gmf_core
+- espressif/gmf_io
+- espressif/gmf_loader
+- espressif/gmf_misc
+- espressif/gmf_video
+- espressif/wifi_remote_over_eppp
+- idf
+- joltwallet/littlefs
+manifest_hash: 4120afa611d32ae1f5005732d8740a12d1b27c5cd0665e82cafddd69a3535bd6
+target: esp32p4
+version: 2.0.0

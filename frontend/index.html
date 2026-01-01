@@ -1,0 +1,387 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 WebRTC H.264 Stream</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        button.primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        button.primary:hover {
+            background: #45a049;
+        }
+        
+        button.danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        button.danger:hover {
+            background: #da190b;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .info-panel {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        
+        .info-panel h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .value {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESP32 WebRTC H.264 Camera Stream</h1>
+        
+        <div id="status" class="status info">
+            Disconnected - Click "Connect" to start stream
+        </div>
+        
+        <div class="controls">
+            <button id="connectBtn" class="primary">Connect</button>
+            <button id="disconnectBtn" class="danger" disabled>Disconnect</button>
+        </div>
+        
+        <div class="video-container">
+            <video id="remoteVideo" autoplay playsinline muted></video>
+        </div>
+        
+        <div class="info-panel">
+            <h3>Stream Information</h3>
+            <div class="info-row">
+                <span class="label">Connection State:</span>
+                <span class="value" id="connectionState">Not connected</span>
+            </div>
+            <div class="info-row">
+                <span class="label">ICE State:</span>
+                <span class="value" id="iceState">-</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Signaling State:</span>
+                <span class="value" id="signalingState">-</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Video Codec:</span>
+                <span class="value" id="videoCodec">H.264</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Resolution:</span>
+                <span class="value" id="resolution">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - update with your ESP32 IP
+        const ESP32_IP = '192.168.1.100';
+        const SIGNALING_URL = `ws://${ESP32_IP}/webrtc/signaling`;
+        
+        // WebRTC configuration
+        const config = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        
+        let pc = null;
+        let ws = null;
+        let isConnected = false;
+        
+        // DOM elements
+        const video = document.getElementById('remoteVideo');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const statusDiv = document.getElementById('status');
+        const connectionStateSpan = document.getElementById('connectionState');
+        const iceStateSpan = document.getElementById('iceState');
+        const signalingStateSpan = document.getElementById('signalingState');
+        const resolutionSpan = document.getElementById('resolution');
+        
+        // Update status display
+        function updateStatus(message, type = 'info') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // Connect to ESP32
+        async function connect() {
+            try {
+                updateStatus('Connecting to ESP32...', 'info');
+                
+                // Create WebSocket connection for signaling
+                ws = new WebSocket(SIGNALING_URL);
+                
+                ws.onopen = () => {
+                    updateStatus('Signaling connected, establishing WebRTC...', 'info');
+                    createPeerConnection();
+                };
+                
+                ws.onmessage = async (event) => {
+                    const message = JSON.parse(event.data);
+                    await handleSignalingMessage(message);
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateStatus('WebSocket connection failed', 'error');
+                };
+                
+                ws.onclose = () => {
+                    updateStatus('Signaling disconnected', 'error');
+                    disconnect();
+                };
+                
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateStatus('Failed to connect: ' + error.message, 'error');
+            }
+        }
+        
+        // Create RTCPeerConnection
+        function createPeerConnection() {
+            pc = new RTCPeerConnection(config);
+            
+            // Handle incoming tracks
+            pc.ontrack = (event) => {
+                console.log('Received remote track');
+                video.srcObject = event.streams[0];
+                updateStatus('Stream active', 'success');
+                isConnected = true;
+                
+                // Get video track info
+                const track = event.track;
+                if (track.kind === 'video') {
+                    track.onended = () => {
+                        updateStatus('Stream ended', 'error');
+                    };
+                    
+                    // Update resolution when available
+                    video.onloadedmetadata = () => {
+                        resolutionSpan.textContent = 
+                            `${video.videoWidth}x${video.videoHeight}`;
+                    };
+                }
+            };
+            
+            // Handle ICE candidates
+            pc.onicecandidate = (event) => {
+                if (event.candidate && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'candidate',
+                        candidate: event.candidate
+                    }));
+                }
+            };
+            
+            // Monitor connection state
+            pc.onconnectionstatechange = () => {
+                connectionStateSpan.textContent = pc.connectionState;
+                console.log('Connection state:', pc.connectionState);
+                
+                if (pc.connectionState === 'failed' || 
+                    pc.connectionState === 'disconnected') {
+                    updateStatus('Connection lost', 'error');
+                }
+            };
+            
+            pc.oniceconnectionstatechange = () => {
+                iceStateSpan.textContent = pc.iceConnectionState;
+                console.log('ICE state:', pc.iceConnectionState);
+            };
+            
+            pc.onsignalingstatechange = () => {
+                signalingStateSpan.textContent = pc.signalingState;
+                console.log('Signaling state:', pc.signalingState);
+            };
+            
+            // Create and send offer
+            createOffer();
+        }
+        
+        // Create SDP offer
+        async function createOffer() {
+            try {
+                // Add transceiver for receiving video
+                pc.addTransceiver('video', { direction: 'recvonly' });
+                
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                // Send offer to ESP32
+                ws.send(JSON.stringify({
+                    type: 'offer',
+                    sdp: offer.sdp
+                }));
+                
+                console.log('Sent offer to ESP32');
+            } catch (error) {
+                console.error('Error creating offer:', error);
+                updateStatus('Failed to create offer: ' + error.message, 'error');
+            }
+        }
+        
+        // Handle signaling messages
+        async function handleSignalingMessage(message) {
+            try {
+                if (message.type === 'answer') {
+                    console.log('Received answer from ESP32');
+                    const answer = new RTCSessionDescription({
+                        type: 'answer',
+                        sdp: message.sdp
+                    });
+                    await pc.setRemoteDescription(answer);
+                    updateStatus('WebRTC connection established', 'success');
+                    
+                } else if (message.type === 'candidate') {
+                    console.log('Received ICE candidate');
+                    const candidate = new RTCIceCandidate(message.candidate);
+                    await pc.addIceCandidate(candidate);
+                }
+            } catch (error) {
+                console.error('Error handling signaling message:', error);
+                updateStatus('Signaling error: ' + error.message, 'error');
+            }
+        }
+        
+        // Disconnect
+        function disconnect() {
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            
+            video.srcObject = null;
+            isConnected = false;
+            
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            
+            connectionStateSpan.textContent = 'Not connected';
+            iceStateSpan.textContent = '-';
+            signalingStateSpan.textContent = '-';
+            resolutionSpan.textContent = '-';
+            
+            updateStatus('Disconnected', 'info');
+        }
+        
+        // Button event listeners
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', disconnect);
+    </script>
+</body>
+</html>

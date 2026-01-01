@@ -1,0 +1,20 @@
+dependencies:
+  idf:
+    version: 5.5.2
+  # waveshare/esp32_p4_nano: 1.2.3
+  espressif/esp_hosted: 2.8.3
+  espressif/esp_wifi_remote: 1.2.2
+  # espressif/esp_codec_dev: 1.5.4
+  # espressif/esp32_p4_function_ev_board_noglib: 5.1.2
+  # espressif/esp32_p4_function_ev_board: 5.1.2
+  # espressif/esp_video: 1.4.1
+  # espressif/esp_board_manager: 0.5.0
+  espressif/cjson: 1.7.19
+  # espressif/esp_new_jpeg: 1.0.0
+  # espressif/esp_h264: 1.2.0~1
+  # espressif/esp_video_codec: 0.5.3
+  espressif/gmf_loader: 0.7.3
+  espressif/gmf_video: 0.7.1
+  espressif/gmf_app_utils: 0.7.7
+  espp/ftp: 1.0.33
+  espp/wifi: 1.0.33
