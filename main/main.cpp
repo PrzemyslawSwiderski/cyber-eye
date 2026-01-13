@@ -31,7 +31,6 @@ using namespace std::chrono_literals;
 // Global controller to keep it alive
 static std::unique_ptr<ctrl::HttpController> g_http_controller;
 
-
 extern "C" void app_main()
 {
   espp::Logger logger({.tag = "MAIN", .level = espp::Logger::Verbosity::DEBUG});
@@ -52,30 +51,30 @@ extern "C" void app_main()
   // Initialize WiFi first
   wifi::start_wifi_task();
 
-  // Optional: Set a callback to start FTP and HTTP server when IP is obtained
-  auto ip_callback = [&logger, &player](const std::string &ip)
+  while (!wifi::is_connected())
   {
-    // logger.info("IP obtained: {}, starting FTP and HTTP servers...", ip);
-    auto signal_str = wifi::get_signal_strength();
-    // logger.info("WiFi signal strength: {} dBm (-30 -> excellent, -90 -> weak)", signal_str);
+    std::this_thread::sleep_for(100ms);
+  }
 
-    // Start FTP server
-    // ftp::start_server_task(ip);
+  auto ip = wifi::get_ip();
 
-    // Start HTTP control server with IP bind address
-    ctrl::HttpController::Config http_config;
-    http_config.port = 8080;
-    http_config.bind_address = ip;
+  auto signal_str = wifi::get_signal_strength();
+  logger.info("WiFi signal strength: {} dBm (-30 -> excellent, -90 -> weak)", signal_str);
 
-    g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
-    g_http_controller->start_task();
+  ctrl::HttpController::Config http_config;
+  http_config.port = 8080;
+  http_config.bind_address = ip;
 
-  };
-  wifi::set_on_got_ip_callback(ip_callback);
+  g_http_controller = std::make_unique<ctrl::HttpController>(
+      player.get(), http_config);
+  g_http_controller->start_task();
+
+  // Start FTP server
+  ftp::start_server_task(ip);
 
   while (1)
   {
     // infinite main loop
-    vTaskDelay(pdMS_TO_TICKS(100));
+    std::this_thread::sleep_for(100ms);
   }
 }

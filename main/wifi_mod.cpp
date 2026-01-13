@@ -13,7 +13,6 @@ namespace wifi
 {
   static std::unique_ptr<espp::WifiSta> wifi_sta;
   static espp::Logger logger({.tag = "WIFI", .level = espp::Logger::Verbosity::INFO});
-  static std::function<void(const std::string &)> external_ip_callback;
 
   void start_wifi_task()
   {
@@ -40,12 +39,7 @@ namespace wifi
           snprintf(ip_str, sizeof(ip_str), "%d.%d.%d.%d", 
                    IP2STR(&eventdata->ip_info.ip));
           
-          logger.info("Got IP: {}", ip_str);
-          
-          // Call external callback if set
-          if (external_ip_callback) {
-            external_ip_callback(ip_str);
-          } },
+          logger.info("Got IP: {}", ip_str); },
         .log_level = espp::Logger::Verbosity::DEBUG};
 
     wifi_sta = std::make_unique<espp::WifiSta>(wifi_config);
@@ -68,11 +62,6 @@ namespace wifi
     }
   }
 
-  void set_on_got_ip_callback(std::function<void(const std::string &)> callback)
-  {
-    external_ip_callback = callback;
-  }
-
   int8_t get_signal_strength()
   {
     if (!wifi_sta)
@@ -90,5 +79,15 @@ namespace wifi
       return -127;
     }
     return ap_record.rssi;
+  }
+
+  bool is_connected()
+  {
+    return wifi_sta.get()->is_connected();
+  }
+
+  std::string get_ip()
+  {
+    return wifi_sta.get()->get_ip_address();
   }
 }

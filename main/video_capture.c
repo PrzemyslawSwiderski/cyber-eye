@@ -14,6 +14,7 @@
 #include "esp_capture_defaults.h"
 #include "esp_capture_sink.h"
 #include "esp_video_enc_default.h"
+#include "esp_audio_enc_default.h"
 #include "video_capture.h"
 // For advanced usage like customized process pipeline
 #include "esp_capture_advance.h"
@@ -181,6 +182,7 @@ int video_capture_run(int duration)
 
     esp_gmf_app_setup_codec_dev(&codec_info);
     esp_video_enc_register_default();
+    esp_audio_enc_register_default();
 
     esp_capture_set_thread_scheduler(capture_test_scheduler);
 

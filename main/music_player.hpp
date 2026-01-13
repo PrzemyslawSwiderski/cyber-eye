@@ -212,6 +212,7 @@ namespace audio
 
       // ----- GMF TASK (MANDATORY) -----
       esp_gmf_task_cfg_t cfg = DEFAULT_ESP_GMF_TASK_CONFIG();
+      cfg.name = "MUSIC_PLAYER";
       cfg.thread.stack = 4096;
 
       if (esp_gmf_task_init(&cfg, &gmf_task_) != ESP_OK)
