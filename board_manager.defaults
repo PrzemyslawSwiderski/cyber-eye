@@ -1,0 +1,8 @@
+# --- Board-specific configuration (managed by esp_board_manager) ---
+# Board: esp32_p4_nano
+CONFIG_IDF_TARGET="esp32p4"
+CONFIG_BOARD_ESP32_P4_NANO=y
+CONFIG_BOARD_NAME="esp32_p4_nano"
+
+# Optional: board-specific SDK configuration defaults
+# --- End of board-specific configuration ---

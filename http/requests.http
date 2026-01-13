@@ -1,0 +1,24 @@
+### Get signal streangth
+GET http://192.168.1.17:8080/api/signal/info
+
+Accept: application/json
+
+### Play music
+GET http://192.168.1.17:8080/api/music/play?file=/sdcard/test.mp3
+
+Accept: application/json
+
+### Stop music
+GET http://192.168.1.17:8080/api/music/stop
+
+Accept: application/json
+
+### Player status
+GET http://192.168.1.17:8080/api/music/status
+
+Accept: application/json
+
+### Change Volume
+GET http://192.168.1.17:8080/api/music/volume?value=70
+
+Accept: application/json

@@ -12,9 +12,9 @@
 
 // Board information
 const esp_board_info_t g_esp_board_info = {
-    .name = "esp32_p4_function_ev",
+    .name = "esp32_p4_nano",
     .chip = "esp32p4",
-    .version = "1.4.0",
-    .description = "ESP32-P4 Function-EV Board",
-    .manufacturer = "ESPRESSIF",
+    .version = "1.0.0",
+    .description = "ESP32-P4 Nano Board",
+    .manufacturer = "Waveshare",
 };

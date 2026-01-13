@@ -11,9 +11,10 @@
 #include <stdlib.h>
 #include "esp_board_device.h"
 #include "dev_audio_codec.h"
-#include "dev_fatfs_sdcard.h"
+#include "dev_camera.h"
+#include "dev_fs_fat.h"
 #include "driver/sdmmc_host.h"
-#include "driver/sdmmc_types.h"
+#include "sdmmc_cmd.h"
 
 // Device configuration structures
 const static dev_audio_codec_config_t esp_bmgr_audio_dac_cfg = {
@@ -30,21 +31,22 @@ const static dev_audio_codec_config_t esp_bmgr_audio_dac_cfg = {
     .dac_channel_mask = 0x1,
     .dac_init_gain = 0,
     .pa_cfg = {
-            .name = "gpio_pa_control",
-            .port = 53,
-            .active_level = 1,
-            .gain = 6.0,
-        },
+        .name = "gpio_pa_control",
+        .port = 53,
+        .active_level = 1,
+        .gain = 6.0,
+    },
     .i2c_cfg = {
-            .name = "i2c_master",
-            .port = 0,
-            .address = 48,
-            .frequency = 400000,
-        },
+        .name = "i2c_master",
+        .port = 0,
+        .address = 48,
+        .frequency = 400000,
+    },
     .i2s_cfg = {
-            .name = "i2s_out",
-            .port = 0,
-        },
+        .name = "i2s_audio_out",
+        .port = 0,
+        .clk_src = 0,
+    },
     .metadata = NULL,
     .metadata_size = 0,
     .mclk_enabled = false,
@@ -67,21 +69,22 @@ const static dev_audio_codec_config_t esp_bmgr_audio_adc_cfg = {
     .dac_channel_mask = 0x0,
     .dac_init_gain = 0,
     .pa_cfg = {
-            .name = "none",
-            .port = -1,
-            .active_level = 0,
-            .gain = 0.0,
-        },
+        .name = "none",
+        .port = -1,
+        .active_level = 0,
+        .gain = 0.0,
+    },
     .i2c_cfg = {
-            .name = "i2c_master",
-            .port = 0,
-            .address = 48,
-            .frequency = 400000,
-        },
+        .name = "i2c_master",
+        .port = 0,
+        .address = 48,
+        .frequency = 400000,
+    },
     .i2s_cfg = {
-            .name = "i2s_in",
-            .port = 0,
-        },
+        .name = "i2s_audio_in",
+        .port = 0,
+        .clk_src = 0,
+    },
     .metadata = NULL,
     .metadata_size = 0,
     .mclk_enabled = false,
@@ -90,33 +93,53 @@ const static dev_audio_codec_config_t esp_bmgr_audio_adc_cfg = {
     .alc_enabled = false,
 };
 
-const static dev_fatfs_sdcard_config_t esp_bmgr_fs_sdcard_cfg = {
+const static dev_fs_fat_config_t esp_bmgr_fs_sdcard_cfg = {
     .name = "fs_sdcard",
     .mount_point = "/sdcard",
-    .vfs_config = {
-            .format_if_mount_failed = false,
-            .max_files = 5,
-            .allocation_unit_size = 16384,
-        },
     .frequency = SDMMC_FREQ_HIGHSPEED,
-    .slot = SDMMC_HOST_SLOT_0,
-    .bus_width = 4,
-    .slot_flags = 0,
-    .pins = {
-            .clk = 0,
-            .cmd = 0,
-            .d0 = 0,
-            .d1 = 0,
-            .d2 = 0,
-            .d3 = 0,
-            .d4 = 0,
-            .d5 = 0,
-            .d6 = 0,
-            .d7 = 0,
-            .cd = -1,
-            .wp = -1,
+    .vfs_config = {
+        .format_if_mount_failed = false,
+        .max_files = 5,
+        .allocation_unit_size = 16384,
+    },
+    .sub_type = "sdmmc",
+    .sub_cfg = {
+        .sdmmc = {
+            .slot = SDMMC_HOST_SLOT_0,
+            .bus_width = 4,
+            .slot_flags = SDMMC_SLOT_FLAG_INTERNAL_PULLUP,
+            .pins = {
+                .clk = 0,
+                .cmd = 0,
+                .d0 = 0,
+                .d1 = 0,
+                .d2 = 0,
+                .d3 = 0,
+                .d4 = 0,
+                .d5 = 0,
+                .d6 = 0,
+                .d7 = 0,
+                .cd = -1,
+                .wp = -1,
+            },
+            .ldo_chan_id = 4,
         },
-    .ldo_chan_id = 4,
+    },
+};
+
+const static dev_camera_config_t esp_bmgr_camera_cfg = {
+    .name = "camera",
+    .type = "camera",
+    .sub_type = "csi",
+    .sub_cfg = {
+        .csi = {
+            .i2c_name = "i2c_master",
+            .i2c_freq = 100000,
+            .reset_io = -1,
+            .pwdn_io = -1,
+            .dont_init_ldo = true,
+        },
+    },
 };
 
 // Device descriptor array
@@ -138,11 +161,19 @@ const esp_board_device_desc_t g_esp_board_devices[] = {
         .init_skip = false,
     },
     {
-        .next = NULL,
+        .next = &g_esp_board_devices[3],
         .name = "fs_sdcard",
-        .type = "fatfs_sdcard",
+        .type = "fs_fat",
         .cfg = &esp_bmgr_fs_sdcard_cfg,
         .cfg_size = sizeof(esp_bmgr_fs_sdcard_cfg),
+        .init_skip = false,
+    },
+    {
+        .next = NULL,
+        .name = "camera",
+        .type = "camera",
+        .cfg = &esp_bmgr_camera_cfg,
+        .cfg_size = sizeof(esp_bmgr_camera_cfg),
         .init_skip = false,
     },
 };

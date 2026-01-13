@@ -55,8 +55,8 @@ namespace audio
     ~MusicPlayer()
     {
       logger_.info("Destructing");
-      stop();
-      cleanup();
+      // stop();
+      // cleanup();
     }
 
     bool initialize()
@@ -79,6 +79,12 @@ namespace audio
 
     void play(const std::string &file)
     {
+      if (state_ == PlayerState::PLAYING)
+      {
+        logger_.warn("Music is already playing");
+        return;
+      }
+
       if (!file_exists(file))
       {
         logger_.error("File not found: {}", file);
@@ -99,6 +105,7 @@ namespace audio
                   .name = "music_ctrl",
                   .stack_size_bytes = 4096,
                   .priority = 5,
+                  .core_id = 0,
               }});
 
       control_task_->start();

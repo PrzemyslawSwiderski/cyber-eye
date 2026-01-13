@@ -12,6 +12,7 @@
 #include "esp_board_periph.h"
 #include "driver/i2c_master.h"
 #include "driver/i2c_types.h"
+#include "esp_ldo_regulator.h"
 #include "hal/gpio_types.h"
 #include "periph_gpio.h"
 #include "periph_i2s.h"
@@ -30,7 +31,7 @@ const static i2c_master_bus_config_t esp_bmgr_i2c_master_cfg = {
         },
 };
 
-const static periph_i2s_config_t esp_bmgr_i2s_out_cfg = {
+const static periph_i2s_config_t esp_bmgr_i2s_audio_out_cfg = {
     .port = I2S_NUM_0,
     .role = I2S_ROLE_MASTER,
     .mode = I2S_COMM_MODE_STD,
@@ -71,7 +72,7 @@ const static periph_i2s_config_t esp_bmgr_i2s_out_cfg = {
         },
 };
 
-const static periph_i2s_config_t esp_bmgr_i2s_in_cfg = {
+const static periph_i2s_config_t esp_bmgr_i2s_audio_in_cfg = {
     .port = I2S_NUM_0,
     .role = I2S_ROLE_MASTER,
     .mode = I2S_COMM_MODE_STD,
@@ -123,6 +124,15 @@ const static periph_gpio_config_t esp_bmgr_gpio_pa_control_cfg = {
     .default_level = 0,
 };
 
+const static esp_ldo_channel_config_t esp_bmgr_ldo_mipi_cfg = {
+    .chan_id = 3,
+    .voltage_mv = 2500,
+    .flags = {
+            .adjustable = 1,
+            .owned_by_hw = 0,
+        },
+};
+
 // Peripheral descriptor array
 const esp_board_periph_desc_t g_esp_board_peripherals[] = {
     {
@@ -130,39 +140,49 @@ const esp_board_periph_desc_t g_esp_board_peripherals[] = {
         .name = "i2c_master",
         .type = "i2c",
         .format = NULL,
-        .role = "master",
+        .role = ESP_BOARD_PERIPH_ROLE_MASTER,
         .cfg = &esp_bmgr_i2c_master_cfg,
         .cfg_size = sizeof(esp_bmgr_i2c_master_cfg),
         .id = 0,
     },
     {
         .next = &g_esp_board_peripherals[2],
-        .name = "i2s_out",
+        .name = "i2s_audio_out",
         .type = "i2s",
         .format = "std-out",
-        .role = "master",
-        .cfg = &esp_bmgr_i2s_out_cfg,
-        .cfg_size = sizeof(esp_bmgr_i2s_out_cfg),
+        .role = ESP_BOARD_PERIPH_ROLE_MASTER,
+        .cfg = &esp_bmgr_i2s_audio_out_cfg,
+        .cfg_size = sizeof(esp_bmgr_i2s_audio_out_cfg),
         .id = 0,
     },
     {
         .next = &g_esp_board_peripherals[3],
-        .name = "i2s_in",
+        .name = "i2s_audio_in",
         .type = "i2s",
         .format = "std-in",
-        .role = "slave",
-        .cfg = &esp_bmgr_i2s_in_cfg,
-        .cfg_size = sizeof(esp_bmgr_i2s_in_cfg),
+        .role = ESP_BOARD_PERIPH_ROLE_MASTER,
+        .cfg = &esp_bmgr_i2s_audio_in_cfg,
+        .cfg_size = sizeof(esp_bmgr_i2s_audio_in_cfg),
+        .id = 0,
+    },
+    {
+        .next = &g_esp_board_peripherals[4],
+        .name = "gpio_pa_control",
+        .type = "gpio",
+        .format = NULL,
+        .role = ESP_BOARD_PERIPH_ROLE_IO,
+        .cfg = &esp_bmgr_gpio_pa_control_cfg,
+        .cfg_size = sizeof(esp_bmgr_gpio_pa_control_cfg),
         .id = 0,
     },
     {
         .next = NULL,
-        .name = "gpio_pa_control",
-        .type = "gpio",
+        .name = "ldo_mipi",
+        .type = "ldo",
         .format = NULL,
-        .role = "io",
-        .cfg = &esp_bmgr_gpio_pa_control_cfg,
-        .cfg_size = sizeof(esp_bmgr_gpio_pa_control_cfg),
+        .role = ESP_BOARD_PERIPH_ROLE_NONE,
+        .cfg = &esp_bmgr_ldo_mipi_cfg,
+        .cfg_size = sizeof(esp_bmgr_ldo_mipi_cfg),
         .id = 0,
     },
 };

@@ -7,9 +7,15 @@
 #include "wifi_mod.hpp"
 // #include "control_mod.hpp"
 // #include "cam_server.h"
+#include "video_capture.h"
 #include "video_mod.h"
 #include "music_player.hpp"
 #include "http_controller.hpp"
+
+#include "esp_video_enc_default.h"
+#include "jpeg_image.hpp"
+#include "rtsp_server.hpp"
+#include "rtsp_client.hpp"
 
 #include "esp_board_manager.h"
 #include "esp_gmf_app_cli.h"
@@ -25,6 +31,7 @@ using namespace std::chrono_literals;
 // Global controller to keep it alive
 static std::unique_ptr<ctrl::HttpController> g_http_controller;
 
+
 extern "C" void app_main()
 {
   espp::Logger logger({.tag = "MAIN", .level = espp::Logger::Verbosity::DEBUG});
@@ -38,8 +45,9 @@ extern "C" void app_main()
   auto player = std::make_unique<audio::MusicPlayer>();
   player->initialize();
 
+  video_capture_run(300);
   // Play music
-  player->play("/sdcard/test.mp3");
+  // player->play("/sdcard/test.mp3");
 
   // Initialize WiFi first
   wifi::start_wifi_task();
@@ -47,12 +55,12 @@ extern "C" void app_main()
   // Optional: Set a callback to start FTP and HTTP server when IP is obtained
   auto ip_callback = [&logger, &player](const std::string &ip)
   {
-    logger.info("IP obtained: {}, starting FTP and HTTP servers...", ip);
+    // logger.info("IP obtained: {}, starting FTP and HTTP servers...", ip);
     auto signal_str = wifi::get_signal_strength();
-    logger.info("WiFi signal strength: {} dBm (-30 -> excellent, -90 -> weak)", signal_str);
+    // logger.info("WiFi signal strength: {} dBm (-30 -> excellent, -90 -> weak)", signal_str);
 
     // Start FTP server
-    ftp::start_server_task(ip);
+    // ftp::start_server_task(ip);
 
     // Start HTTP control server with IP bind address
     ctrl::HttpController::Config http_config;
@@ -61,6 +69,7 @@ extern "C" void app_main()
 
     g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
     g_http_controller->start_task();
+
   };
   wifi::set_on_got_ip_callback(ip_callback);
 

@@ -11,7 +11,8 @@
 #include <stddef.h>
 #include "esp_board_device.h"
 #include "dev_audio_codec.h"
-#include "dev_fatfs_sdcard.h"
+#include "dev_camera.h"
+#include "dev_fs_fat.h"
 
 // Device handle array
 esp_board_device_handle_t g_esp_board_device_handles[] = {
@@ -32,11 +33,19 @@ esp_board_device_handle_t g_esp_board_device_handles[] = {
         .deinit = dev_audio_codec_deinit
     },
     {
-        .next = NULL,
+        .next = &g_esp_board_device_handles[3],
         .name = "fs_sdcard",
-        .type = "fatfs_sdcard",
+        .type = "fs_fat",
         .device_handle = NULL,
-        .init = dev_fatfs_sdcard_init,
-        .deinit = dev_fatfs_sdcard_deinit
+        .init = dev_fs_fat_init,
+        .deinit = dev_fs_fat_deinit
+    },
+    {
+        .next = NULL,
+        .name = "camera",
+        .type = "camera",
+        .device_handle = NULL,
+        .init = dev_camera_init,
+        .deinit = dev_camera_deinit
     },
 };

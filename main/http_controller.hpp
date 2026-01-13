@@ -42,25 +42,13 @@ namespace ctrl
 
     void start_task()
     {
-      if (server_task_)
+      if (http_server_)
       {
-        logger_.warn("HTTP server task already running");
+        logger_.warn("HTTP server already running");
         return;
       }
 
-      server_task_ = std::make_unique<espp::Task>(
-          espp::Task::Config{
-              .callback = [this](auto &, auto &)
-              {
-                return this->start_server();
-              },
-              .task_config = {
-                  .name = "http_ctrl",
-                  .stack_size_bytes = 4096,
-                  .priority = 5,
-              }});
-
-      server_task_->start();
+      start_server();
     }
 
     void stop()
@@ -71,10 +59,6 @@ namespace ctrl
         httpd_stop(http_server_);
         http_server_ = nullptr;
       }
-      if (server_task_)
-      {
-        server_task_->stop();
-      }
     }
 
   private:
@@ -82,21 +66,22 @@ namespace ctrl
     Config config_;
     espp::Logger logger_;
     httpd_handle_t http_server_{nullptr};
-    std::unique_ptr<espp::Task> server_task_;
     static HttpController *instance_;
 
     bool start_server()
     {
       logger_.info("Starting HTTP control server on {}:{}", config_.bind_address, config_.port);
 
-      // Suppress httpd warnings
-      // esp_log_level_set("httpd", ESP_LOG_ERROR);
-      // esp_log_level_set("httpd_parse", ESP_LOG_ERROR);
-      // esp_log_level_set("httpd_txrx", ESP_LOG_ERROR);
+      // Adjust http server log levels
+      esp_log_level_set("httpd", ESP_LOG_DEBUG);
+      esp_log_level_set("httpd_parse", ESP_LOG_DEBUG);
+      esp_log_level_set("httpd_txrx", ESP_LOG_DEBUG);
 
       httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
       http_config.server_port = config_.port;
-      http_config.max_uri_handlers = 10;
+      http_config.max_uri_handlers = 20;
+      http_config.task_priority = 10;
+      http_config.stack_size = 8192;
 
       if (httpd_start(&http_server_, &http_config) != ESP_OK)
       {

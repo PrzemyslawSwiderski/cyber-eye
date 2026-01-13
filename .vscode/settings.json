@@ -23,14 +23,15 @@
     "IDF_TARGET": "esp32p4",
     "IDF_EXTRA_ACTIONS_PATH": "/home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_board_manager"
   },
-  "clangd.path": "/home/pswidersk/.espressif/tools/esp-clang/esp-20.1.1_20250829/esp-clang/bin/clangd",
+  "clangd.path": "/home/pswidersk/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
   "clangd.arguments": [
     "--background-index",
-    "--query-driver=/home/pswidersk/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
-    "--compile-commands-dir=/home/pswidersk/REPOS/cyber-eye/build"
+    "--query-driver=/home/pswidersk/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+    "--compile-commands-dir=/home/pswidersk/REPOS/cyber-eye"
   ],
   "idf.flashType": "UART",
   "idf.port": "/dev/ttyACM0",
   "idf.toolsPath": "/home/pswidersk/.espressif",
-  "idf.currentSetup": "/home/pswidersk/.espressif/release-v5.5/esp-idf"
+  "idf.currentSetup": "/home/pswidersk/.espressif/release-v5.5/esp-idf",
+  "C_Cpp.errorSquiggles": "disabled"
 }

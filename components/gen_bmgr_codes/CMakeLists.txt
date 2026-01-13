@@ -1,10 +1,10 @@
 # Board information output
-message(STATUS "Selected Board: esp32_p4_function_ev")
-message(STATUS "Board Path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_board_manager/boards/esp32_p4_function_ev")
+message(STATUS "Selected Board: esp32_p4_nano")
+message(STATUS "Board Path: /home/pswidersk/REPOS/cyber-eye/components/esp32_p4_nano")
 
 idf_component_register(
-    SRC_DIRS "." "../../managed_components/espressif__esp_board_manager/boards/esp32_p4_function_ev"
-    INCLUDE_DIRS "." "../../managed_components/espressif__esp_board_manager/boards/esp32_p4_function_ev"
+    SRC_DIRS "." "../esp32_p4_nano"
+    INCLUDE_DIRS "." "../esp32_p4_nano"
     REQUIRES esp_board_manager
 )
 

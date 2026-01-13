@@ -13,8 +13,10 @@ dependencies:
   # espressif/esp_new_jpeg: 1.0.0
   # espressif/esp_h264: 1.2.0~1
   # espressif/esp_video_codec: 0.5.3
-  espressif/gmf_loader: 0.7.3
-  espressif/gmf_video: 0.7.1
-  espressif/gmf_app_utils: 0.7.7
+  espressif/gmf_loader: 0.7.3~1
+  # espressif/gmf_video: 0.7.1
+  espressif/gmf_app_utils: 0.7.8~1
+  espressif/esp_capture: 0.7.8~1
   espp/ftp: 1.0.33
   espp/wifi: 1.0.33
+  espp/rtsp: 1.0.33

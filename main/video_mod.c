@@ -22,7 +22,7 @@
 #define VIDEO_EL_MAX_STACK_SIZE (40 * 1024)
 
 /* Streaming configuration - modify as needed */
-#define STREAM_URI "rtsp://192.168.1.12:8554/live" // Example RTSP URI
+#define STREAM_URI "rtsp://192.168.1.17:8554/live" // Example RTSP URI
 // Alternative examples:
 // #define STREAM_URI "udp://239.0.0.1:1234"  // UDP multicast
 // #define STREAM_URI "tcp://192.168.1.100:5000"  // TCP stream
@@ -187,6 +187,7 @@ static int prepare_pipeline(void)
 
   esp_gmf_port_handle_t in_port = NEW_ESP_GMF_PORT_IN_BLOCK(
       in_acquire, in_release, NULL, NULL, 0, ESP_GMF_MAX_DELAY);
+
   esp_gmf_pipeline_reg_el_port(encoder.pipe,
                                "vid_enc",
                                ESP_GMF_IO_DIR_READER,

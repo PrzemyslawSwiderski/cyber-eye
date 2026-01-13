@@ -1,0 +1,11 @@
+menu "Cyber EYE"
+
+config HTTPD_ENABLE_EVENTS
+  bool "Enable ESP_HTTP_SERVER_EVENT"
+  default y
+  help
+    This enables the ESP_HTTP_SERVER_EVENT event type. 
+    Generating these eventes adds some overhead. 
+    If you are not using this event type, you can disable it to save some memory and add performance.
+
+endmenu

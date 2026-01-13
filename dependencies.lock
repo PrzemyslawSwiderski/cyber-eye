@@ -43,6 +43,12 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.0.33
+  espp/rtsp:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__rtsp
+      type: local
+    version: 1.0.33
   espp/socket:
     component_hash: 980328b42f03da0863dcb2d9c7c99021dd5880dde72a04b5e1e470c11bf705b7
     dependencies:
@@ -87,6 +93,12 @@ dependencies:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__cjson
       type: local
     version: 1.7.19
+  espressif/cmake_utilities:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__cmake_utilities
+      type: local
+    version: 0.5.3
   espressif/dl_fft:
     dependencies: []
     source:
@@ -128,7 +140,19 @@ dependencies:
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_board_manager
       type: local
-    version: 0.4.8
+    version: 0.5.1
+  espressif/esp_cam_sensor:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_cam_sensor
+      type: local
+    version: 1.7.0
+  espressif/esp_capture:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_capture
+      type: local
+    version: 0.7.8~1
   espressif/esp_codec_dev:
     component_hash: 0d9e9bc288156eb55f79338d312e1ebf8c9dfbd5e7d13ef0f20ccb031b4e15cf
     dependencies:
@@ -144,7 +168,7 @@ dependencies:
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_h264
       type: local
-    version: 1.2.0~1
+    version: 1.0.4
   espressif/esp_hosted:
     dependencies: []
     source:
@@ -157,12 +181,38 @@ dependencies:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_image_effects
       type: local
     version: 1.0.1
+  espressif/esp_ipa:
+    dependencies: []
+    source:
+      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_ipa
+      type: local
+    version: 1.3.1
+  espressif/esp_muxer:
+    component_hash: 9e04768f41757e9f96a014298b0daa3ec6c67cbf162a34836af41978e7c603fb
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.2
   espressif/esp_new_jpeg:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_new_jpeg
       type: local
     version: 1.0.0
+  espressif/esp_sccb_intf:
+    component_hash: 44dfa738680ccbc3705ae6940f59be603165f4f7e4d05c3eb5f433705fdc92be
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.3'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.0.7
   espressif/esp_serial_slave_link:
     component_hash: ac1776806de0a6e371c84e87898bb983e19ce62aa7f1e2e5c4a3b0234a575d2c
     dependencies:
@@ -173,6 +223,49 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.1.2
+  espressif/esp_video:
+    component_hash: 2239aed49fa4eb1efdf3b0c2b95b05c03fc8b363c101bc2cd70f5e3bcd3c7cc4
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.*
+    - name: espressif/esp_cam_sensor
+      registry_url: https://components.espressif.com
+      require: private
+      version: 1.7.*
+    - name: espressif/esp_h264
+      registry_url: https://components.espressif.com
+      require: private
+      rules:
+      - if: target in [esp32p4]
+      version: 1.0.4
+    - name: espressif/esp_ipa
+      registry_url: https://components.espressif.com
+      require: private
+      rules:
+      - if: target in [esp32p4]
+      version: 1.3.*
+    - name: idf
+      require: private
+      version: '>=5.4'
+    - name: espressif/usb_host_uvc
+      registry_url: https://components.espressif.com
+      require: private
+      rules:
+      - if: target in [esp32p4, esp32s3]
+      version: 2.4.*
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    targets:
+    - esp32p4
+    - esp32s3
+    - esp32c3
+    - esp32c5
+    - esp32c6
+    - esp32c61
+    version: 1.4.1
   espressif/esp_video_codec:
     dependencies: []
     source:
@@ -190,18 +283,31 @@ dependencies:
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_ai_audio
       type: local
-    version: 0.7.4
+    version: 0.7.4~1
   espressif/gmf_app_utils:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_app_utils
       type: local
-    version: 0.7.7
+    version: 0.7.8~1
   espressif/gmf_audio:
-    dependencies: []
+    component_hash: 7d51b18cbfe05670d92e63f87538c795ce0e9350c86e278996d51c09aa4b30e8
+    dependencies:
+    - name: espressif/esp_audio_codec
+      registry_url: https://components.espressif.com
+      require: private
+      version: ~2.3
+    - name: espressif/esp_audio_effects
+      registry_url: https://components.espressif.com
+      require: private
+      version: ~1.1
+    - name: espressif/gmf_core
+      registry_url: https://components.espressif.com
+      require: private
+      version: ^0.7
     source:
-      path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_audio
-      type: local
+      registry_url: https://components.espressif.com/
+      type: service
     version: 0.7.2
   espressif/gmf_core:
     component_hash: c93ce72be18e9c86380a0ce65929c23eb377c853fc58a888889e58b3f3624aed
@@ -221,7 +327,7 @@ dependencies:
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_loader
       type: local
-    version: 0.7.3
+    version: 0.7.3~1
   espressif/gmf_misc:
     component_hash: 2e03ac6fcd5738e9f21b35f9ff7c353713a43e62bb4e77504d53fc5fb50666f3
     dependencies:
@@ -252,6 +358,29 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 0.7.1
+  espressif/usb_host_uvc:
+    component_hash: 197eae0d1dd5ddec773704653e0ff70e81126b8ccdb62e034ed239f755adb48c
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    - name: espressif/usb
+      registry_url: https://components.espressif.com
+      require: public
+      rules:
+      - if: idf_version >=6.0
+      - if: target not in ["linux"]
+      version: ^1.0.0
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    targets:
+    - esp32s2
+    - esp32s3
+    - esp32p4
+    - esp32h4
+    - linux
+    version: 2.4.1
   espressif/wifi_remote_over_eppp:
     component_hash: e1b4c485ed5afe36615b9b555dfdcbe4be33898dc3732b5bedf235bba45bd286
     dependencies:
@@ -287,10 +416,12 @@ direct_dependencies:
 - espp/format
 - espp/ftp
 - espp/logger
+- espp/rtsp
 - espp/socket
 - espp/task
 - espp/wifi
 - espressif/cjson
+- espressif/cmake_utilities
 - espressif/dl_fft
 - espressif/eppp_link
 - espressif/esp-dsp
@@ -298,12 +429,18 @@ direct_dependencies:
 - espressif/esp_audio_codec
 - espressif/esp_audio_effects
 - espressif/esp_board_manager
+- espressif/esp_cam_sensor
+- espressif/esp_capture
 - espressif/esp_codec_dev
 - espressif/esp_h264
 - espressif/esp_hosted
 - espressif/esp_image_effects
+- espressif/esp_ipa
+- espressif/esp_muxer
 - espressif/esp_new_jpeg
+- espressif/esp_sccb_intf
 - espressif/esp_serial_slave_link
+- espressif/esp_video
 - espressif/esp_video_codec
 - espressif/esp_wifi_remote
 - espressif/gmf_ai_audio
@@ -314,9 +451,10 @@ direct_dependencies:
 - espressif/gmf_loader
 - espressif/gmf_misc
 - espressif/gmf_video
+- espressif/usb_host_uvc
 - espressif/wifi_remote_over_eppp
 - idf
 - joltwallet/littlefs
-manifest_hash: 4120afa611d32ae1f5005732d8740a12d1b27c5cd0665e82cafddd69a3535bd6
+manifest_hash: a35fe994870a40f9c286553d6f3814afe1c07b1ae243c9e8dad3c02406c39cf6
 target: esp32p4
 version: 2.0.0
