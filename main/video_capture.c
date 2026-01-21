@@ -183,6 +183,7 @@ int video_capture_run(int duration)
     esp_gmf_app_setup_codec_dev(&codec_info);
     esp_video_enc_register_default();
     esp_audio_enc_register_default();
+    // esp_video_init();
 
     esp_capture_set_thread_scheduler(capture_test_scheduler);
 

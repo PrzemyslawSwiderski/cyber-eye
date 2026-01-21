@@ -455,6 +455,6 @@ direct_dependencies:
 - espressif/wifi_remote_over_eppp
 - idf
 - joltwallet/littlefs
-manifest_hash: ab412b7f8005d820671a6eedf84ce3f445242c5f168fa5883400b810ec679505
+manifest_hash: e87f25c698de7d6deb64c358f6e0de934636159736d5dcaa8f8c5cadcf7e28f1
 target: esp32p4
 version: 2.0.0
