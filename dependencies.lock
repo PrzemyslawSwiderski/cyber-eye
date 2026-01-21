@@ -140,7 +140,7 @@ dependencies:
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_board_manager
       type: local
-    version: 0.5.1
+    version: 0.5.2
   espressif/esp_cam_sensor:
     dependencies: []
     source:
@@ -455,6 +455,6 @@ direct_dependencies:
 - espressif/wifi_remote_over_eppp
 - idf
 - joltwallet/littlefs
-manifest_hash: a35fe994870a40f9c286553d6f3814afe1c07b1ae243c9e8dad3c02406c39cf6
+manifest_hash: ab412b7f8005d820671a6eedf84ce3f445242c5f168fa5883400b810ec679505
 target: esp32p4
 version: 2.0.0
