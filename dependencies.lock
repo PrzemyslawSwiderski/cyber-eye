@@ -4,33 +4,33 @@ dependencies:
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__base_component
       type: local
-    version: 1.0.33
+    version: 1.0.34
   espp/cli:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__cli
       type: local
-    version: 1.0.33
+    version: 1.0.34
   espp/file_system:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__file_system
       type: local
-    version: 1.0.33
+    version: 1.0.34
   espp/format:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__format
       type: local
-    version: 1.0.33
+    version: 1.0.34
   espp/ftp:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__ftp
       type: local
-    version: 1.0.33
+    version: 1.0.34
   espp/logger:
-    component_hash: 91bc16342ba44200df5b56977270921a863e3447d3c94049a75e30b8d515b34d
+    component_hash: 5ce7b81bbc402def13d580d9a9763b142118dd466903a3895d6dbcb1aa1cfb91
     dependencies:
     - name: espp/format
       registry_url: https://components.espressif.com
@@ -42,15 +42,15 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.0.33
+    version: 1.0.34
   espp/rtsp:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__rtsp
       type: local
-    version: 1.0.33
+    version: 1.0.34
   espp/socket:
-    component_hash: 980328b42f03da0863dcb2d9c7c99021dd5880dde72a04b5e1e470c11bf705b7
+    component_hash: ae0a26e902472a82ca4755dd8c19879f18fe4e74a61ff6bb7013651e59e45080
     dependencies:
     - name: espp/base_component
       registry_url: https://components.espressif.com
@@ -66,9 +66,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.0.33
+    version: 1.0.34
   espp/task:
-    component_hash: 82c7bbafb07f7e7f2e5b4813ad3a03c48458dcb0027c19ef8c834ef91771ff49
+    component_hash: dbc4f984fd75947bb6578a24ad865dc2eb4a31b0e234be13899d09595a64c0cb
     dependencies:
     - name: espp/base_component
       registry_url: https://components.espressif.com
@@ -80,13 +80,13 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.0.33
+    version: 1.0.34
   espp/wifi:
     dependencies: []
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espp__wifi
       type: local
-    version: 1.0.33
+    version: 1.0.34
   espressif/cjson:
     dependencies: []
     source:
@@ -188,7 +188,7 @@ dependencies:
       type: local
     version: 1.3.1
   espressif/esp_muxer:
-    component_hash: 9e04768f41757e9f96a014298b0daa3ec6c67cbf162a34836af41978e7c603fb
+    component_hash: cc0f78844aa85fe6da69aef543c039c18eda0ca43c0fa5c61ba3d6abe8a2369b
     dependencies:
     - name: idf
       require: private
@@ -196,7 +196,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.1.2
+    version: 1.1.3
   espressif/esp_new_jpeg:
     dependencies: []
     source:
@@ -382,7 +382,7 @@ dependencies:
     - linux
     version: 2.4.1
   espressif/wifi_remote_over_eppp:
-    component_hash: e1b4c485ed5afe36615b9b555dfdcbe4be33898dc3732b5bedf235bba45bd286
+    component_hash: ac4d13625cc9f88597cd612d2758580fac287d8ec731b606f2a0720d28cda6cd
     dependencies:
     - name: espressif/eppp_link
       registry_url: https://components.espressif.com
@@ -394,7 +394,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 0.3.0
+    version: 0.3.1
   idf:
     source:
       type: idf
@@ -455,6 +455,6 @@ direct_dependencies:
 - espressif/wifi_remote_over_eppp
 - idf
 - joltwallet/littlefs
-manifest_hash: e87f25c698de7d6deb64c358f6e0de934636159736d5dcaa8f8c5cadcf7e28f1
+manifest_hash: 0e59367bf9f5b74d8f99da5ba3505a840ba6a1961f4907d0c61d3e1836f3dbdf
 target: esp32p4
 version: 2.0.0

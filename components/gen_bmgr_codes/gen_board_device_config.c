@@ -98,8 +98,8 @@ const static dev_fs_fat_config_t esp_bmgr_fs_sdcard_cfg = {
     .mount_point = "/sdcard",
     .frequency = SDMMC_FREQ_HIGHSPEED,
     .vfs_config = {
-            .format_if_mount_failed = false,
-            .max_files = 5,
+            .format_if_mount_failed = true,
+            .max_files = 10,
             .allocation_unit_size = 16384,
         },
     .sub_type = "sdmmc",

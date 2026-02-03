@@ -13,8 +13,8 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-#define VIDEO_SINK0_WIDTH  1280
-#define VIDEO_SINK0_HEIGHT 720
+#define VIDEO_SINK0_WIDTH  800
+#define VIDEO_SINK0_HEIGHT 640
 #define VIDEO_SINK0_FPS    20
 
 #define AUDIO_SINK0_FMT         ESP_CAPTURE_FMT_ID_AAC

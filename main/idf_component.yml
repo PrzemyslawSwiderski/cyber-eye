@@ -1,7 +1,6 @@
 dependencies:
   idf:
     version: 5.5.2
-  # waveshare/esp32_p4_nano: 1.2.3
   espressif/esp_hosted: 2.8.3
   espressif/esp_wifi_remote: 1.2.2
   espressif/esp_board_manager: 0.5.2
@@ -17,6 +16,6 @@ dependencies:
   # espressif/gmf_video: 0.7.1
   espressif/gmf_app_utils: 0.7.8~1
   espressif/esp_capture: 0.7.8~1
-  espp/ftp: 1.0.33
-  espp/wifi: 1.0.33
-  espp/rtsp: 1.0.33
+  espp/ftp: 1.0.34
+  espp/wifi: 1.0.34
+  espp/rtsp: 1.0.34

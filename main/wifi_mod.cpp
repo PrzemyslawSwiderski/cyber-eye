@@ -83,11 +83,11 @@ namespace wifi
 
   bool is_connected()
   {
-    return wifi_sta.get()->is_connected();
+    return wifi_sta->is_connected();
   }
 
   std::string get_ip()
   {
-    return wifi_sta.get()->get_ip_address();
+    return wifi_sta->get_ip_address();
   }
 }
