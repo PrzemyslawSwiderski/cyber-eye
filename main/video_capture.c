@@ -368,6 +368,10 @@ static int storage_slice_hdlr(char *file_path, int len, int slice_idx)
 
 int video_capture_run_with_muxer(int duration)
 {
+  esp_video_enc_register_default();
+  esp_audio_enc_register_default();
+  mp4_muxer_register();
+  
   video_capture_sys_t capture_sys = {0};
   int ret = 0;
   do

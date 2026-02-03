@@ -71,7 +71,8 @@ extern "C" void app_main()
   g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
   g_http_controller->start_task();
 
-  video_capture_run(300);
+  // video_capture_run(300);
+  video_capture_run_with_muxer(5000);
 
   while (1)
   {

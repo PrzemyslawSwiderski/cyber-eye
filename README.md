@@ -25,3 +25,19 @@ The ESP32-P4 supports MIPI-CSI and MIPI-DSI interfaces and enables communication
 * Raspberry Pi Camera (B) 5 MP ×1
 * 8 Ω 2 W speaker ×1
 * 15-pin FFC ribbon cable ×1
+
+## Potential Issues
+
+
+
+### Littlefs registration issue
+
+```
+E (00:00:08.485) esp_littlefs: Failed to register Littlefs to "/storage"
+[FileSystem/E][10.210]: Failed to initialize LittleFS, unknown error
+```
+
+Increase the `CONFIG_VFS_MAX_COUNT` to maximum value:
+```
+CONFIG_VFS_MAX_COUNT=20
+```
