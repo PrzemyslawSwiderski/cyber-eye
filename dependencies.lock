@@ -188,7 +188,7 @@ dependencies:
       type: local
     version: 1.3.1
   espressif/esp_muxer:
-    component_hash: cc0f78844aa85fe6da69aef543c039c18eda0ca43c0fa5c61ba3d6abe8a2369b
+    component_hash: 0e3f27c1ec96035c846b9ccc262190045e93b721defe13060d0e4ab712d98852
     dependencies:
     - name: idf
       require: private
@@ -196,7 +196,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.1.3
+    version: 1.2.0
   espressif/esp_new_jpeg:
     dependencies: []
     source:
@@ -204,7 +204,7 @@ dependencies:
       type: local
     version: 1.0.0
   espressif/esp_sccb_intf:
-    component_hash: 44dfa738680ccbc3705ae6940f59be603165f4f7e4d05c3eb5f433705fdc92be
+    component_hash: c071b189e49f40940722aea01a5489f873385cc39cd5b14012341135b85d1a9d
     dependencies:
     - name: idf
       require: private
@@ -212,7 +212,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 0.0.7
+    version: 0.0.8
   espressif/esp_serial_slave_link:
     component_hash: ac1776806de0a6e371c84e87898bb983e19ce62aa7f1e2e5c4a3b0234a575d2c
     dependencies:
@@ -283,7 +283,7 @@ dependencies:
     source:
       path: /home/pswidersk/REPOS/cyber-eye/managed_components/espressif__gmf_ai_audio
       type: local
-    version: 0.7.4~1
+    version: 0.7.5
   espressif/gmf_app_utils:
     dependencies: []
     source:
@@ -455,6 +455,6 @@ direct_dependencies:
 - espressif/wifi_remote_over_eppp
 - idf
 - joltwallet/littlefs
-manifest_hash: 0e59367bf9f5b74d8f99da5ba3505a840ba6a1961f4907d0c61d3e1836f3dbdf
+manifest_hash: f428d16e6aaac5d448b0d9f11b391392e3ef890f17c23c9527874bae6d6b36d5
 target: esp32p4
 version: 2.0.0

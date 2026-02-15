@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "settings.h"
 #include "mp4_muxer.h"
+#include "ts_muxer.h"
 #include "esp_capture.h"
 #include "esp_capture_defaults.h"
 #include "esp_capture_sink.h"
@@ -105,6 +106,37 @@ static int build_video_capture(video_capture_sys_t *capture_sys)
   esp_capture_cfg_t capture_cfg = {
       .sync_mode = ESP_CAPTURE_SYNC_MODE_AUDIO,
       .audio_src = capture_sys->aud_src,
+      .video_src = capture_sys->vid_src,
+  };
+  esp_capture_open(&capture_cfg, &capture_sys->capture);
+  if (capture_sys->capture == NULL)
+  {
+    ESP_LOGE(TAG, "Fail to create capture");
+    return -1;
+  }
+  return 0;
+}
+
+static int build_video_capture_ts(video_capture_sys_t *capture_sys)
+{
+  // Create video source firstly
+  capture_sys->vid_src = create_video_source();
+  if (capture_sys->vid_src == NULL)
+  {
+    ESP_LOGE(TAG, "Fail to create video source");
+    return -1;
+  }
+  // esp_capture_audio_dev_src_cfg_t codec_cfg = {
+  //     .record_handle = esp_gmf_app_get_record_handle(),
+  // };
+  // capture_sys->aud_src = esp_capture_new_audio_dev_src(&codec_cfg);
+  // if (capture_sys->aud_src == NULL)
+  // {
+  //   ESP_LOGE(TAG, "Fail to create video source");
+  //   return -1;
+  // }
+  esp_capture_cfg_t capture_cfg = {
+      .sync_mode = ESP_CAPTURE_SYNC_MODE_SYSTEM,
       .video_src = capture_sys->vid_src,
   };
   esp_capture_open(&capture_cfg, &capture_sys->capture);
@@ -342,6 +374,7 @@ int video_capture_run_one_shot(int duration)
 }
 
 #define FILE_SLICE_STORAGE_PATTERN "/sdcard/vid_%d.mp4"
+#define FILE_SLICE_STORAGE_PATTERN_TS "/sdcard/vid_%d.ts"
 
 static int check_file_size(int slice_idx)
 {
@@ -366,12 +399,19 @@ static int storage_slice_hdlr(char *file_path, int len, int slice_idx)
   return 0;
 }
 
+static int storage_slice_hdlr_ts(char *file_path, int len, int slice_idx)
+{
+  snprintf(file_path, len, FILE_SLICE_STORAGE_PATTERN_TS, slice_idx);
+  ESP_LOGI(TAG, "Start to write to file %s", file_path);
+  return 0;
+}
+
 int video_capture_run_with_muxer(int duration)
 {
   esp_video_enc_register_default();
   esp_audio_enc_register_default();
   mp4_muxer_register();
-  
+
   video_capture_sys_t capture_sys = {0};
   int ret = 0;
   do
@@ -440,6 +480,175 @@ int video_capture_run_with_muxer(int duration)
       break;
     }
     check_file_size(0);
+  } while (0);
+  destroy_video_capture(&capture_sys);
+  return ret;
+}
+
+int video_capture_run_with_muxer_ts(int duration)
+{
+  esp_video_enc_register_default();
+  ts_muxer_register();
+
+  video_capture_sys_t capture_sys = {0};
+  int ret = 0;
+  do
+  {
+    // Build capture system with AEC
+    ret = build_video_capture_ts(&capture_sys);
+    if (ret != 0)
+    {
+      break;
+    }
+    // Setup for sink
+    esp_capture_sink_handle_t sink = NULL;
+    esp_capture_sink_cfg_t sink_cfg = {
+        .video_info = {
+            .format_id = VIDEO_SINK0_FMT,
+            .width = VIDEO_SINK0_WIDTH,
+            .height = VIDEO_SINK0_HEIGHT,
+            .fps = VIDEO_SINK0_FPS,
+        },
+    };
+    ret = esp_capture_sink_setup(capture_sys.capture, 0, &sink_cfg, &sink);
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to setup sink");
+      break;
+    }
+
+    // Add TS muxer
+    ts_muxer_config_t ts_cfg = {
+        .base_config = {
+            .muxer_type = ESP_MUXER_TYPE_TS,
+            .slice_duration = 0,
+            // .url_pattern = storage_slice_hdlr_ts,
+        }};
+
+    esp_capture_muxer_cfg_t muxer_cfg = {
+        .base_config = &ts_cfg.base_config,
+        .cfg_size = sizeof(ts_cfg),
+    };
+
+    ret = esp_capture_sink_add_muxer(sink, &muxer_cfg);
+    // Streaming while muxer no need special settings
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to add muxer return %d", ret);
+      break;
+    }
+    esp_capture_sink_enable_muxer(sink, true);
+    // Enable sink and start
+    esp_capture_sink_enable(sink, ESP_CAPTURE_RUN_MODE_ALWAYS);
+    ret = esp_capture_start(capture_sys.capture);
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to start video capture");
+      break;
+    }
+    read_video_frames(&sink, 1, duration);
+    ret = esp_capture_stop(capture_sys.capture);
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to start video capture");
+      break;
+    }
+    check_file_size(0);
+  } while (0);
+  destroy_video_capture(&capture_sys);
+  return ret;
+}
+
+// Callback function for HTTP streaming URL pattern
+static int http_stream_url_pattern(char *file_path, int len, int slice_idx)
+{
+  // For HTTP streaming, return the streaming endpoint URL
+  const char *stream_url = "http://0.0.0.0:8080/stream.ts";
+  int url_len = strlen(stream_url);
+
+  if (len < url_len + 1)
+  {
+    return -1; // Buffer too small
+  }
+
+  strncpy(file_path, stream_url, len);
+  file_path[len - 1] = '\0'; // Ensure null termination
+
+  return 0;
+}
+
+int video_capture_run_with_muxer_http(int duration)
+{
+  esp_video_enc_register_default();
+  esp_audio_enc_register_default();
+  ts_muxer_register();
+  video_capture_sys_t capture_sys = {0};
+  int ret = 0;
+  do
+  {
+    // Build capture system with AEC
+    ret = build_video_capture(&capture_sys);
+    if (ret != 0)
+    {
+      break;
+    }
+    // Setup for sink
+    esp_capture_sink_handle_t sink = NULL;
+    esp_capture_sink_cfg_t sink_cfg = {
+        .video_info = {
+            .format_id = VIDEO_SINK0_FMT,
+            .width = VIDEO_SINK0_WIDTH,
+            .height = VIDEO_SINK0_HEIGHT,
+            .fps = VIDEO_SINK0_FPS,
+        },
+        .audio_info = {
+            .format_id = AUDIO_SINK0_FMT,
+            .sample_rate = AUDIO_SINK0_SAMPLE_RATE,
+            .channel = AUDIO_SINK0_CHANNEL,
+            .bits_per_sample = 16,
+        },
+    };
+    ret = esp_capture_sink_setup(capture_sys.capture, 0, &sink_cfg, &sink);
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to setup sink");
+      break;
+    }
+    // Add TS muxer to sink and enable it for HTTP streaming
+    ts_muxer_config_t ts_cfg = {
+        .base_config = {
+            .muxer_type = ESP_MUXER_TYPE_TS,
+            .url_pattern = http_stream_url_pattern, // HTTP streaming URL
+            .slice_duration = 0,                    // No slicing for continuous stream
+        },
+    };
+    esp_capture_muxer_cfg_t muxer_cfg = {
+        .base_config = &ts_cfg.base_config,
+        .cfg_size = sizeof(ts_cfg),
+    };
+    ret = esp_capture_sink_add_muxer(sink, &muxer_cfg);
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to add muxer return %d", ret);
+      break;
+    }
+    esp_capture_sink_enable_muxer(sink, true);
+    // Enable sink and start
+    esp_capture_sink_enable(sink, ESP_CAPTURE_RUN_MODE_ALWAYS);
+    ret = esp_capture_start(capture_sys.capture);
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to start video capture");
+      break;
+    }
+    ESP_LOGI(TAG, "Streaming at http://0.0.0.0:8080/stream.ts");
+    read_video_frames(&sink, 1, duration);
+    ret = esp_capture_stop(capture_sys.capture);
+    if (ret != ESP_CAPTURE_ERR_OK)
+    {
+      ESP_LOGE(TAG, "Fail to stop video capture");
+      break;
+    }
   } while (0);
   destroy_video_capture(&capture_sys);
   return ret;

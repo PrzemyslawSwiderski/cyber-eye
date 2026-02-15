@@ -61,6 +61,8 @@ int video_capture_run_with_overlay(int duration);
  *       - Others  Fail to run
  */
 int video_capture_run_with_muxer(int duration);
+int video_capture_run_with_muxer_ts(int duration);
+int video_capture_run_with_muxer_http(int duration);
 
 /**
  * @brief  Run video capture with customized processor for configured duration

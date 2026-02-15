@@ -12,6 +12,16 @@
 #include "freertos/task.h"
 #include "task.hpp"
 
+#include "ts_muxer.h"
+#include "esp_capture.h"
+#include "esp_capture_defaults.h"
+#include "esp_capture_sink.h"
+#include "esp_video_enc_default.h"
+#include "esp_audio_enc_default.h"
+#include "esp_gmf_app_setup_peripheral.h"
+#include "esp_capture_advance.h"
+#include "settings.h"
+
 namespace ctrl
 {
   class HttpController
@@ -38,6 +48,7 @@ namespace ctrl
     ~HttpController()
     {
       stop();
+      cleanup_video_capture();
     }
 
     void start_task()
@@ -68,6 +79,25 @@ namespace ctrl
     httpd_handle_t http_server_{nullptr};
     static HttpController *instance_;
 
+    typedef struct
+    {
+      esp_capture_handle_t capture;        /*!< Capture handle */
+      esp_capture_audio_src_if_t *aud_src; /*!< Audio source interface for video capture */
+      esp_capture_video_src_if_t *vid_src; /*!< Video source interface */
+    } video_capture_sys_t;
+
+    typedef struct
+    {
+      uint32_t aud_frames;
+      uint32_t aud_total_frame_size;
+      uint32_t vid_frames;
+      uint32_t vid_total_frame_size;
+    } video_capture_res_t;
+
+    video_capture_sys_t capture_sys_;
+    esp_capture_sink_handle_t stream_sink_;
+    std::mutex capture_mutex_; // To handle concurrent access
+
     bool start_server()
     {
       logger_.info("Starting HTTP control server on {}:{}", config_.bind_address, config_.port);
@@ -80,8 +110,9 @@ namespace ctrl
       httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
       http_config.server_port = config_.port;
       http_config.max_uri_handlers = 20;
-      http_config.task_priority = 10;
-      http_config.stack_size = 8192;
+      http_config.task_priority = 5;
+      http_config.stack_size = 40 * 1024;
+      http_config.core_id = 0;
 
       if (httpd_start(&http_server_, &http_config) != ESP_OK)
       {
@@ -89,9 +120,102 @@ namespace ctrl
         return false;
       }
 
+      // Initialize capture system if not already done
+      esp_err_t ret = instance_->init_video_capture();
+      if (ret != ESP_OK)
+      {
+        logger_.error("init_video_capture");
+        return ESP_FAIL;
+      }
+
       register_handlers();
       logger_.info("HTTP control server started successfully");
       return true;
+    }
+
+    static void capture_test_scheduler(const char *thread_name, esp_capture_thread_schedule_cfg_t *schedule_cfg)
+    {
+      if (strcmp(thread_name, "buffer_in") == 0)
+      {
+        // AEC feed task can have high priority
+        schedule_cfg->stack_size = 6 * 1024;
+        schedule_cfg->priority = 10;
+        schedule_cfg->core_id = 1;
+      }
+      else if (strcmp(thread_name, "venc_0") == 0)
+      {
+        // For H264 may need huge stack if use hardware encoder can set it to small value
+        schedule_cfg->core_id = 1;
+        schedule_cfg->stack_size = 40 * 1024;
+        schedule_cfg->priority = 1;
+      }
+    }
+
+    esp_err_t init_video_capture()
+    {
+      std::lock_guard<std::mutex> lock(capture_mutex_);
+
+      esp_video_enc_register_default();
+
+      esp_capture_set_thread_scheduler(capture_test_scheduler);
+
+      memset(&capture_sys_, 0, sizeof(capture_sys_));
+
+      esp_err_t ret = build_video_capture(&capture_sys_);
+      if (ret != ESP_OK)
+      {
+        logger_.error("Failed to build video capture: {}", ret);
+        return ret;
+      }
+
+      // Setup sink
+      esp_capture_sink_cfg_t sink_cfg = {
+          .video_info = {
+              .format_id = VIDEO_SINK0_FMT,
+              .width = VIDEO_SINK0_WIDTH,
+              .height = VIDEO_SINK0_HEIGHT,
+              .fps = VIDEO_SINK0_FPS,
+          },
+      };
+
+      ret = esp_capture_sink_setup(capture_sys_.capture, 0, &sink_cfg, &stream_sink_);
+      if (ret != ESP_CAPTURE_ERR_OK)
+      {
+        logger_.error("Failed to setup sink: {}", ret);
+        destroy_video_capture(&capture_sys_);
+        return ret;
+      }
+
+      // esp_capture_sink_enable_muxer(stream_sink_, true);
+      esp_capture_sink_enable(stream_sink_, ESP_CAPTURE_RUN_MODE_ALWAYS);
+
+      // Start capture once
+      ret = esp_capture_start(capture_sys_.capture);
+      if (ret != ESP_CAPTURE_ERR_OK)
+      {
+        logger_.error("Failed to start capture: {}", ret);
+        destroy_video_capture(&capture_sys_);
+        return ret;
+      }
+
+      logger_.info("Video capture initialized successfully");
+
+      // Wait for muxer to initialize
+      vTaskDelay(pdMS_TO_TICKS(500));
+
+      return ESP_OK;
+    }
+
+    void cleanup_video_capture()
+    {
+      std::lock_guard<std::mutex> lock(capture_mutex_);
+
+      esp_capture_stop(capture_sys_.capture);
+      destroy_video_capture(&capture_sys_);
+
+      stream_sink_ = nullptr;
+
+      logger_.info("Video capture cleaned up");
     }
 
     void register_handlers()
@@ -107,6 +231,8 @@ namespace ctrl
       register_uri("/api/system/info", HTTP_GET, handle_system_info);
       register_uri("/api/system/reset", HTTP_GET, handle_system_reset);
       register_uri("/api/signal/info", HTTP_GET, handle_signal_info);
+
+      register_uri("/stream.h264", HTTP_GET, handle_stream);
     }
 
     void register_uri(const char *uri, httpd_method_t method, esp_err_t (*handler)(httpd_req_t *))
@@ -314,6 +440,126 @@ namespace ctrl
       cJSON_AddNumberToObject(root, "wifi_signal_strength", signal_strength);
       send_json(req, root);
       return ESP_OK;
+    }
+
+    static esp_capture_video_src_if_t *create_video_source(void)
+    {
+      esp_capture_video_v4l2_src_cfg_t v4l2_cfg = {
+          .dev_name = "/dev/video0",
+          .buf_count = 8,
+      };
+      return esp_capture_new_video_v4l2_src(&v4l2_cfg);
+    }
+
+    static int build_video_capture(video_capture_sys_t *capture_sys)
+    {
+      // Create video source firstly
+      capture_sys->vid_src = create_video_source();
+      if (capture_sys->vid_src == NULL)
+      {
+        instance_->logger_.info("Fail to create video source");
+        return -1;
+      }
+      esp_capture_cfg_t capture_cfg = {
+          .sync_mode = ESP_CAPTURE_SYNC_MODE_SYSTEM,
+          .video_src = capture_sys->vid_src,
+      };
+      esp_capture_open(&capture_cfg, &capture_sys->capture);
+      if (capture_sys->capture == NULL)
+      {
+        instance_->logger_.info("Fail to create capture");
+        return -1;
+      }
+      return 0;
+    }
+
+    static esp_err_t handle_stream(httpd_req_t *req)
+    {
+      log_request(req, "/stream.h264");
+
+      // HTTP headers
+      httpd_resp_set_type(req, "video/h264");
+      httpd_resp_set_status(req, "200 OK");
+      httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+      httpd_resp_set_hdr(req, "Pragma", "no-cache");
+      httpd_resp_set_hdr(req, "Expires", "0");
+      httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+      httpd_resp_set_hdr(req, "Accept-Ranges", "none");
+      httpd_resp_set_hdr(req, "Transfer-Encoding", "chunked");
+      httpd_resp_set_hdr(req, "Connection", "close");
+
+      instance_->logger_.info("Client connected to stream");
+
+      // Stream loop
+      esp_capture_stream_frame_t frame = {};
+      frame.stream_type = ESP_CAPTURE_STREAM_TYPE_VIDEO;
+
+      int frame_count = 0;
+      int dropped_count = 0;
+
+      // Acquire video frame with timeout
+      while (true)
+      {
+        esp_err_t err = esp_capture_sink_acquire_frame(instance_->stream_sink_, &frame, true);
+
+        if (err != ESP_CAPTURE_ERR_OK)
+        {
+          // instance_->logger_.error("Frame acquire failed: error code={}", err);
+          dropped_count++;
+          esp_capture_sink_release_frame(instance_->stream_sink_, &frame);
+          continue;
+        }
+
+        dropped_count = 0; // Reset on success
+
+        if (frame_count == 0)
+        {
+          instance_->logger_.info("First 16 bytes: {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x}",
+                                  frame.data[0], frame.data[1], frame.data[2], frame.data[3],
+                                  frame.data[4], frame.data[5], frame.data[6], frame.data[7],
+                                  frame.data[8], frame.data[9], frame.data[10], frame.data[11],
+                                  frame.data[12], frame.data[13], frame.data[14], frame.data[15]);
+        }
+
+        // instance_->logger_.info("Sending frame {}, size={}", frame_count, frame.size);
+        esp_err_t ret = httpd_resp_send_chunk(req, (const char *)frame.data, frame.size);
+        // instance_->logger_.info("Chunk sent, ret={}", ret);
+
+        esp_capture_sink_release_frame(instance_->stream_sink_, &frame);
+
+        if (ret != ESP_OK)
+        {
+          instance_->logger_.info("Client disconnected, ret={}", ret);
+          break;
+        }
+
+        frame_count++;
+      }
+
+      instance_->logger_.info("Stream ended, total frames={}, dropped={}", frame_count, dropped_count);
+
+      httpd_resp_send_chunk(req, NULL, 0);
+
+      return ESP_OK;
+    }
+
+    static void destroy_video_capture(video_capture_sys_t *capture_sys)
+    {
+      if (capture_sys->capture)
+      {
+        esp_capture_close(capture_sys->capture);
+        capture_sys->capture = NULL;
+      }
+      if (capture_sys->aud_src)
+      {
+        free(capture_sys->aud_src);
+        capture_sys->aud_src = NULL;
+      }
+      if (capture_sys->vid_src)
+      {
+        free(capture_sys->vid_src);
+        capture_sys->vid_src = NULL;
+      }
     }
   };
 
