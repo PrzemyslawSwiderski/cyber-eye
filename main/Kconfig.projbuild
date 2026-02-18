@@ -8,4 +8,16 @@ config HTTPD_ENABLE_EVENTS
     Generating these eventes adds some overhead. 
     If you are not using this event type, you can disable it to save some memory and add performance.
 
+config VIDEO_STREAM_WIDTH
+    int "Video stream width"
+    default 800
+
+config VIDEO_STREAM_HEIGHT
+    int "Video stream height"
+    default 640
+
+config VIDEO_STREAM_FPS
+    int "Video stream FPS"
+    default 50
+
 endmenu

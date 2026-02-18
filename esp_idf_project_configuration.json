@@ -3,9 +3,9 @@
     "build": {
       "compileArgs": [ ],
       "ninjaArgs": [ ],
-      "buildDirectoryPath": "/home/pswidersk/REPOS/cyber-eye",
-      "sdkconfigDefaults": [ ],
-      "sdkconfigFilePath": ""
+      "buildDirectoryPath": "/home/pswidersk/REPOS/cyber-eye/build",
+      "sdkconfigDefaults": [ "/home/pswidersk/REPOS/cyber-eye/board_manager.defaults", "/home/pswidersk/REPOS/cyber-eye/sdkconfig.defaults" ],
+      "sdkconfigFilePath": "/home/pswidersk/REPOS/cyber-eye/sdkconfig"
     },
     "env": {
       "IDF_EXTRA_ACTIONS_PATH": "/home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_board_manager"
@@ -19,7 +19,7 @@
       "args": [ ]
     },
     "tasks": {
-      "preBuild": "",
+      "preBuild": "idf.py reconfigure",
       "preFlash": "",
       "postBuild": "",
       "postFlash": ""

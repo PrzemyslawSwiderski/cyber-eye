@@ -27,7 +27,7 @@
   "clangd.arguments": [
     "--background-index",
     "--query-driver=/home/pswidersk/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
-    "--compile-commands-dir=/home/pswidersk/REPOS/cyber-eye"
+    "--compile-commands-dir=/home/pswidersk/REPOS/cyber-eye/build"
   ],
   "idf.flashType": "UART",
   "idf.port": "/dev/ttyACM0",

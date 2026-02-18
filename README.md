@@ -28,6 +28,9 @@ The ESP32-P4 supports MIPI-CSI and MIPI-DSI interfaces and enables communication
 
 ## Potential Issues
 
+### SDKCONFIG
+
+To prevent weird issues with `sdkconfig` file, always remove it on full clean so that proper default are loaded from the `sdkconfig.defaults` and .
 
 
 ### Littlefs registration issue
@@ -40,4 +43,12 @@ E (00:00:08.485) esp_littlefs: Failed to register Littlefs to "/storage"
 Increase the `CONFIG_VFS_MAX_COUNT` to maximum value:
 ```
 CONFIG_VFS_MAX_COUNT=20
+```
+
+### VLC display lag
+
+Use `ffplay` for the minimal latency:
+
+```
+ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -vf setpts=0 http://192.168.1.17:8080/stream.h264
 ```
