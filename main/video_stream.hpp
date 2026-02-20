@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <sys/socket.h>
 #include "logger.hpp"
 #include "esp_system.h"
 #include "esp_http_server.h"
@@ -12,6 +13,9 @@
 #include "esp_gmf_app_setup_peripheral.h"
 #include "esp_capture_advance.h"
 #include "settings.h"
+
+#define STREAM_TASK_STACK_SIZE (32 * 1024) // 32KB
+#define STREAM_TASK_PRIORITY 20
 
 namespace ctrl
 {
@@ -91,53 +95,43 @@ namespace ctrl
 
     static esp_err_t handle_stream(httpd_req_t *req)
     {
-      httpd_resp_set_type(req, "video/h264");
-      httpd_resp_set_status(req, "200 OK");
-      httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
-      httpd_resp_set_hdr(req, "Pragma", "no-cache");
-      httpd_resp_set_hdr(req, "Expires", "0");
-      httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-      httpd_resp_set_hdr(req, "Accept-Ranges", "none");
-      httpd_resp_set_hdr(req, "Transfer-Encoding", "chunked");
-      httpd_resp_set_hdr(req, "Connection", "close");
-
-      instance_->logger_.info("Client connected to stream");
-
-      esp_capture_stream_frame_t frame = {};
-      frame.stream_type = ESP_CAPTURE_STREAM_TYPE_VIDEO;
-
-      int frame_count = 0;
-      int dropped_count = 0;
-
-      while (true)
+      instance_->logger_.info("Client connected");
+      int sock = httpd_req_to_sockfd(req);
+      if (sock < 0)
       {
-        esp_err_t err = esp_capture_sink_acquire_frame(instance_->stream_sink_, &frame, true);
-
-        if (err != ESP_CAPTURE_ERR_OK)
-        {
-          dropped_count++;
-          esp_capture_sink_release_frame(instance_->stream_sink_, &frame);
-          continue;
-        }
-
-        dropped_count = 0;
-
-        esp_err_t ret = httpd_resp_send_chunk(req, (const char *)frame.data, frame.size);
-
-        esp_capture_sink_release_frame(instance_->stream_sink_, &frame);
-
-        if (ret != ESP_OK)
-        {
-          instance_->logger_.info("Client disconnected, ret={}", ret);
-          break;
-        }
-
-        frame_count++;
+        instance_->logger_.error("Failed to get socket fd");
+        return ESP_FAIL;
       }
 
-      instance_->logger_.info("Stream ended, total frames={}, dropped={}", frame_count, dropped_count);
+      // Send HTTP headers directly on the raw socket before handing it off
+      const char *headers =
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Type: video/h264\r\n"
+          "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+          "Pragma: no-cache\r\n"
+          "Expires: 0\r\n"
+          "Access-Control-Allow-Origin: *\r\n"
+          "Accept-Ranges: none\r\n"
+          "Transfer-Encoding: chunked\r\n"
+          "Connection: close\r\n"
+          "\r\n";
+      send(sock, headers, strlen(headers), 0);
 
-      httpd_resp_send_chunk(req, NULL, 0);
+      // Allocate context on the heap — task owns it and must free it
+      auto *ctx = new StreamTaskCtx{
+          .sink = instance_->stream_sink_,
+          .sock = sock,
+      };
+
+      xTaskCreate(
+          stream_task,
+          "stream_task",
+          STREAM_TASK_STACK_SIZE,
+          ctx,
+          STREAM_TASK_PRIORITY,
+          nullptr);
+
+      // Return ESP_OK without calling httpd_resp_send — httpd will not close the socket
       return ESP_OK;
     }
 
@@ -154,18 +148,73 @@ namespace ctrl
     std::mutex capture_mutex_;
     static VideoStream *instance_;
 
+    struct StreamTaskCtx
+    {
+      esp_capture_sink_handle_t sink;
+      int sock;
+    };
+
+    static void stream_task(void *arg)
+    {
+      auto *ctx = static_cast<StreamTaskCtx *>(arg);
+
+      int frame_count = 0;
+      int dropped_count = 0;
+      esp_capture_stream_frame_t frame = {};
+      frame.stream_type = ESP_CAPTURE_STREAM_TYPE_VIDEO;
+
+      while (true)
+      {
+        esp_err_t err = esp_capture_sink_acquire_frame(ctx->sink, &frame, true);
+        if (err != ESP_CAPTURE_ERR_OK)
+        {
+          dropped_count++;
+          esp_capture_sink_release_frame(ctx->sink, &frame);
+          continue;
+        }
+
+        dropped_count = 0;
+
+        // Format as HTTP chunked encoding
+        char chunk_header[16];
+        int header_len = snprintf(chunk_header, sizeof(chunk_header), "%x\r\n", frame.size);
+
+        bool disconnected =
+            send(ctx->sock, chunk_header, header_len, 0) < 0 ||
+            send(ctx->sock, (const char *)frame.data, frame.size, 0) < 0 ||
+            send(ctx->sock, "\r\n", 2, 0) < 0;
+
+        esp_capture_sink_release_frame(ctx->sink, &frame);
+
+        if (disconnected)
+        {
+          instance_->logger_.info("Client disconnected, frames={}, dropped={}", frame_count, dropped_count);
+          break;
+        }
+
+        frame_count++;
+      }
+
+      // Send chunked EOF
+      send(ctx->sock, "0\r\n\r\n", 5, 0);
+
+      close(ctx->sock);
+      delete ctx;
+      vTaskDelete(nullptr);
+    }
+
     static void thread_scheduler(const char *thread_name, esp_capture_thread_schedule_cfg_t *schedule_cfg)
     {
       schedule_cfg->core_id = 1;
-      schedule_cfg->stack_size = 40 * 1024;
-      schedule_cfg->priority = 1;
+      schedule_cfg->stack_size = STREAM_TASK_STACK_SIZE;
+      schedule_cfg->priority = STREAM_TASK_PRIORITY;
     }
 
     static esp_capture_video_src_if_t *create_video_source()
     {
       esp_capture_video_v4l2_src_cfg_t v4l2_cfg = {
           .dev_name = "/dev/video0",
-          .buf_count = 4,
+          .buf_count = 8,
       };
       return esp_capture_new_video_v4l2_src(&v4l2_cfg);
     }

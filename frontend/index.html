@@ -1,387 +1,292 @@
-
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 WebRTC H.264 Stream</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        
-        .video-container {
-            position: relative;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-        
-        video {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.3s;
-        }
-        
-        button.primary {
-            background: #4CAF50;
-            color: white;
-        }
-        
-        button.primary:hover {
-            background: #45a049;
-        }
-        
-        button.danger {
-            background: #f44336;
-            color: white;
-        }
-        
-        button.danger:hover {
-            background: #da190b;
-        }
-        
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-        
-        .status.info {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-        
-        .status.success {
-            background: #e8f5e9;
-            color: #388e3c;
-        }
-        
-        .status.error {
-            background: #ffebee;
-            color: #c62828;
-        }
-        
-        .info-panel {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 4px;
-            margin-top: 20px;
-        }
-        
-        .info-panel h3 {
-            margin-top: 0;
-            color: #555;
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .info-row:last-child {
-            border-bottom: none;
-        }
-        
-        .label {
-            font-weight: bold;
-            color: #666;
-        }
-        
-        .value {
-            color: #333;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>ESP32 WebRTC H.264 Camera Stream</h1>
-        
-        <div id="status" class="status info">
-            Disconnected - Click "Connect" to start stream
-        </div>
-        
-        <div class="controls">
-            <button id="connectBtn" class="primary">Connect</button>
-            <button id="disconnectBtn" class="danger" disabled>Disconnect</button>
-        </div>
-        
-        <div class="video-container">
-            <video id="remoteVideo" autoplay playsinline muted></video>
-        </div>
-        
-        <div class="info-panel">
-            <h3>Stream Information</h3>
-            <div class="info-row">
-                <span class="label">Connection State:</span>
-                <span class="value" id="connectionState">Not connected</span>
-            </div>
-            <div class="info-row">
-                <span class="label">ICE State:</span>
-                <span class="value" id="iceState">-</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Signaling State:</span>
-                <span class="value" id="signalingState">-</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Video Codec:</span>
-                <span class="value" id="videoCodec">H.264</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Resolution:</span>
-                <span class="value" id="resolution">-</span>
-            </div>
-        </div>
-    </div>
+<html>
 
-    <script>
-        // Configuration - update with your ESP32 IP
-        const ESP32_IP = '192.168.1.100';
-        const SIGNALING_URL = `ws://${ESP32_IP}/webrtc/signaling`;
-        
-        // WebRTC configuration
-        const config = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
-        
-        let pc = null;
-        let ws = null;
-        let isConnected = false;
-        
-        // DOM elements
-        const video = document.getElementById('remoteVideo');
-        const connectBtn = document.getElementById('connectBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
-        const statusDiv = document.getElementById('status');
-        const connectionStateSpan = document.getElementById('connectionState');
-        const iceStateSpan = document.getElementById('iceState');
-        const signalingStateSpan = document.getElementById('signalingState');
-        const resolutionSpan = document.getElementById('resolution');
-        
-        // Update status display
-        function updateStatus(message, type = 'info') {
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
+<head>
+  <title>H264 Viewer</title>
+  <style>
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    canvas {
+      max-width: 100%;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      color: #0f0;
+      font: 14px monospace;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    #controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 4px;
+      font: bold 14px monospace;
+      cursor: pointer;
+    }
+
+    #btnConnect {
+      background: #2a2;
+      color: #fff;
+    }
+
+    #btnDisconnect {
+      background: #a22;
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #wrapper {
+      position: relative;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="wrapper">
+    <canvas id="canvas"></canvas>
+    <div id="overlay">
+      <span id="statusText">Disconnected</span>
+      <span id="fpsText">FPS: --</span>
+      <span id="signalText">Signal: --</span>
+    </div>
+  </div>
+  <div id="controls">
+    <button id="btnConnect">Connect</button>
+    <button id="btnDisconnect" disabled>Disconnect</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const statusText = document.getElementById('statusText');
+    const fpsText = document.getElementById('fpsText');
+    const signalText = document.getElementById('signalText');
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+
+    // --- FPS ---
+    let fps = 0, frameCount = 0, lastTime = performance.now();
+    function updateFps() {
+      frameCount++;
+      const now = performance.now();
+      const delta = now - lastTime;
+      if (delta >= 500) {
+        fps = Math.round((frameCount / delta) * 1000);
+        frameCount = 0;
+        lastTime = now;
+        fpsText.textContent = `FPS: ${fps}`;
+      }
+    }
+
+    // --- Signal polling ---
+    let signalInterval = null;
+    async function pollSignal() {
+      try {
+        const res = await fetch('http://192.168.1.17:8080/api/signal/info');
+        const json = await res.json();
+        const strength = json.wifi_signal_strength;
+        signalText.textContent = `Signal: ${strength} dBm ${signalBars(strength)}`;
+      } catch {
+        signalText.textContent = 'Signal: N/A';
+      }
+    }
+
+    function signalBars(dbm) {
+      if (dbm >= -50) return '▂▄▆█';
+      if (dbm >= -60) return '▂▄▆_';
+      if (dbm >= -70) return '▂▄__';
+      if (dbm >= -80) return '▂___';
+      return '____';
+    }
+
+    // --- NAL parsing ---
+    function splitNalUnits(data) {
+      const nals = [];
+      let start = -1;
+      for (let i = 0; i < data.length - 3; i++) {
+        const is4 = data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0 && data[i + 3] === 1;
+        const is3 = data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 1;
+        if (is4 || is3) {
+          if (start !== -1) nals.push(data.slice(start, i));
+          start = i + (is4 ? 4 : 3);
+          i += is4 ? 3 : 2;
         }
-        
-        // Connect to ESP32
-        async function connect() {
-            try {
-                updateStatus('Connecting to ESP32...', 'info');
-                
-                // Create WebSocket connection for signaling
-                ws = new WebSocket(SIGNALING_URL);
-                
-                ws.onopen = () => {
-                    updateStatus('Signaling connected, establishing WebRTC...', 'info');
-                    createPeerConnection();
-                };
-                
-                ws.onmessage = async (event) => {
-                    const message = JSON.parse(event.data);
-                    await handleSignalingMessage(message);
-                };
-                
-                ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    updateStatus('WebSocket connection failed', 'error');
-                };
-                
-                ws.onclose = () => {
-                    updateStatus('Signaling disconnected', 'error');
-                    disconnect();
-                };
-                
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = false;
-                
-            } catch (error) {
-                console.error('Connection error:', error);
-                updateStatus('Failed to connect: ' + error.message, 'error');
-            }
+      }
+      if (start !== -1) nals.push(data.slice(start));
+      return nals;
+    }
+
+    function getNalType(nal) { return nal[0] & 0x1F; }
+
+    function buildExtradata(sps, pps) {
+      return new Uint8Array([
+        1, sps[1], sps[2], sps[3], 0xFF, 0xE1,
+        (sps.length >> 8) & 0xFF, sps.length & 0xFF, ...sps,
+        0x01,
+        (pps.length >> 8) & 0xFF, pps.length & 0xFF, ...pps,
+      ]);
+    }
+
+    function toAvcc(nal) {
+      const buf = new ArrayBuffer(4 + nal.byteLength);
+      new DataView(buf).setUint32(0, nal.byteLength, false);
+      new Uint8Array(buf, 4).set(nal);
+      return new Uint8Array(buf);
+    }
+
+    function concat(...arrays) {
+      const out = new Uint8Array(arrays.reduce((n, a) => n + a.byteLength, 0));
+      let offset = 0;
+      for (const a of arrays) { out.set(a, offset); offset += a.byteLength; }
+      return out;
+    }
+
+    // --- Decoder ---
+    let decoder = null;
+    let sps = null, pps = null, timestamp = 0;
+    const FRAME_US = 1_000_000 / 30;
+
+    function createDecoder() {
+      return new VideoDecoder({
+        output(frame) {
+          canvas.width = frame.displayWidth;
+          canvas.height = frame.displayHeight;
+          ctx.drawImage(frame, 0, 0);
+          frame.close();
+          updateFps();
+        },
+        error(e) { console.error(e); statusText.textContent = 'Decoder error'; }
+      });
+    }
+
+    function feedNals(nals) {
+      const frameNals = [];
+      let isKey = false;
+
+      for (const nal of nals) {
+        const type = getNalType(nal);
+        if (type === 7) { sps = nal; continue; }
+        if (type === 8) { pps = nal; continue; }
+
+        if (sps && pps && decoder.state === 'unconfigured') {
+          decoder.configure({
+            codec: `avc1.${sps[1].toString(16).padStart(2, '0')}${sps[2].toString(16).padStart(2, '0')}${sps[3].toString(16).padStart(2, '0')}`,
+            description: buildExtradata(sps, pps),
+          });
         }
-        
-        // Create RTCPeerConnection
-        function createPeerConnection() {
-            pc = new RTCPeerConnection(config);
-            
-            // Handle incoming tracks
-            pc.ontrack = (event) => {
-                console.log('Received remote track');
-                video.srcObject = event.streams[0];
-                updateStatus('Stream active', 'success');
-                isConnected = true;
-                
-                // Get video track info
-                const track = event.track;
-                if (track.kind === 'video') {
-                    track.onended = () => {
-                        updateStatus('Stream ended', 'error');
-                    };
-                    
-                    // Update resolution when available
-                    video.onloadedmetadata = () => {
-                        resolutionSpan.textContent = 
-                            `${video.videoWidth}x${video.videoHeight}`;
-                    };
-                }
-            };
-            
-            // Handle ICE candidates
-            pc.onicecandidate = (event) => {
-                if (event.candidate && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'candidate',
-                        candidate: event.candidate
-                    }));
-                }
-            };
-            
-            // Monitor connection state
-            pc.onconnectionstatechange = () => {
-                connectionStateSpan.textContent = pc.connectionState;
-                console.log('Connection state:', pc.connectionState);
-                
-                if (pc.connectionState === 'failed' || 
-                    pc.connectionState === 'disconnected') {
-                    updateStatus('Connection lost', 'error');
-                }
-            };
-            
-            pc.oniceconnectionstatechange = () => {
-                iceStateSpan.textContent = pc.iceConnectionState;
-                console.log('ICE state:', pc.iceConnectionState);
-            };
-            
-            pc.onsignalingstatechange = () => {
-                signalingStateSpan.textContent = pc.signalingState;
-                console.log('Signaling state:', pc.signalingState);
-            };
-            
-            // Create and send offer
-            createOffer();
+
+        if (type === 5) isKey = true;
+        frameNals.push(toAvcc(nal));
+      }
+
+      if (!frameNals.length || decoder.state !== 'configured') return;
+      decoder.decode(new EncodedVideoChunk({
+        type: isKey ? 'key' : 'delta',
+        timestamp,
+        duration: FRAME_US,
+        data: concat(...frameNals),
+      }));
+      timestamp += FRAME_US;
+    }
+
+    // --- Stream control ---
+    let abortController = null;
+
+    async function connect() {
+      btnConnect.disabled = true;
+      btnDisconnect.disabled = false;
+      statusText.textContent = 'Connecting...';
+
+      // Reset state
+      sps = null; pps = null; timestamp = 0;
+      decoder = createDecoder();
+      abortController = new AbortController();
+
+      // Start signal polling
+      pollSignal();
+      signalInterval = setInterval(pollSignal, 3000);
+
+      try {
+        const response = await fetch('http://192.168.1.17:8080/stream.h264', {
+          signal: abortController.signal
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        statusText.textContent = 'Streaming';
+        const reader = response.body.getReader();
+        let remainder = new Uint8Array(0);
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) { statusText.textContent = 'Stream ended'; break; }
+
+          const chunk = concat(remainder, value);
+          const nals = splitNalUnits(chunk);
+          if (nals.length > 1) {
+            feedNals(nals.slice(0, -1));
+            const last = nals[nals.length - 1];
+            remainder = chunk.slice(chunk.length - last.length - 4);
+          } else {
+            remainder = chunk;
+          }
         }
-        
-        // Create SDP offer
-        async function createOffer() {
-            try {
-                // Add transceiver for receiving video
-                pc.addTransceiver('video', { direction: 'recvonly' });
-                
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                
-                // Send offer to ESP32
-                ws.send(JSON.stringify({
-                    type: 'offer',
-                    sdp: offer.sdp
-                }));
-                
-                console.log('Sent offer to ESP32');
-            } catch (error) {
-                console.error('Error creating offer:', error);
-                updateStatus('Failed to create offer: ' + error.message, 'error');
-            }
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          statusText.textContent = 'Disconnected';
+        } else {
+          statusText.textContent = `Error: ${e.message}`;
+          console.error(e);
         }
-        
-        // Handle signaling messages
-        async function handleSignalingMessage(message) {
-            try {
-                if (message.type === 'answer') {
-                    console.log('Received answer from ESP32');
-                    const answer = new RTCSessionDescription({
-                        type: 'answer',
-                        sdp: message.sdp
-                    });
-                    await pc.setRemoteDescription(answer);
-                    updateStatus('WebRTC connection established', 'success');
-                    
-                } else if (message.type === 'candidate') {
-                    console.log('Received ICE candidate');
-                    const candidate = new RTCIceCandidate(message.candidate);
-                    await pc.addIceCandidate(candidate);
-                }
-            } catch (error) {
-                console.error('Error handling signaling message:', error);
-                updateStatus('Signaling error: ' + error.message, 'error');
-            }
-        }
-        
-        // Disconnect
-        function disconnect() {
-            if (pc) {
-                pc.close();
-                pc = null;
-            }
-            
-            if (ws) {
-                ws.close();
-                ws = null;
-            }
-            
-            video.srcObject = null;
-            isConnected = false;
-            
-            connectBtn.disabled = false;
-            disconnectBtn.disabled = true;
-            
-            connectionStateSpan.textContent = 'Not connected';
-            iceStateSpan.textContent = '-';
-            signalingStateSpan.textContent = '-';
-            resolutionSpan.textContent = '-';
-            
-            updateStatus('Disconnected', 'info');
-        }
-        
-        // Button event listeners
-        connectBtn.addEventListener('click', connect);
-        disconnectBtn.addEventListener('click', disconnect);
-        
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', disconnect);
-    </script>
+      } finally {
+        cleanup();
+      }
+    }
+
+    function disconnect() {
+      if (abortController) abortController.abort();
+    }
+
+    function cleanup() {
+      clearInterval(signalInterval);
+      signalInterval = null;
+      if (decoder && decoder.state !== 'closed') decoder.close();
+      decoder = null;
+      fpsText.textContent = 'FPS: --';
+      signalText.textContent = 'Signal: --';
+      btnConnect.disabled = false;
+      btnDisconnect.disabled = true;
+    }
+
+    btnConnect.addEventListener('click', connect);
+    btnDisconnect.addEventListener('click', disconnect);
+  </script>
 </body>
+
 </html>

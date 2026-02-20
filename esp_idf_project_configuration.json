@@ -19,7 +19,7 @@
       "args": [ ]
     },
     "tasks": {
-      "preBuild": "idf.py reconfigure",
+      "preBuild": "",
       "preFlash": "",
       "postBuild": "",
       "postFlash": ""
