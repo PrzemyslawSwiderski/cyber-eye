@@ -320,12 +320,17 @@ namespace ctrl
     {
       log_request(req, "/api/signal/info");
 
+      auto start = esp_timer_get_time(); // microseconds
+
       auto signal_strength = wifi::get_signal_strength();
-      instance_->logger_.debug("WiFi signal strength: {}", signal_strength);
 
       cJSON *root = cJSON_CreateObject();
       cJSON_AddNumberToObject(root, "wifi_signal_strength", signal_strength);
       send_json(req, root);
+
+      auto elapsed_ms = (esp_timer_get_time() - start) / 1000.0f;
+      instance_->logger_.info("handle_signal_info took {:.2f} ms", elapsed_ms);
+
       return ESP_OK;
     }
   };

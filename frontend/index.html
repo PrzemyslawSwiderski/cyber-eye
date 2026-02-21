@@ -17,6 +17,7 @@
 
     canvas {
       max-width: 100%;
+      transform: rotate(180deg);
     }
 
     #overlay {
@@ -36,6 +37,49 @@
     #controls {
       display: flex;
       gap: 8px;
+      align-items: center;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #aaa;
+      font: 14px monospace;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-label input[type="checkbox"] {
+      appearance: none;
+      width: 36px;
+      height: 20px;
+      background: #555;
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .toggle-label input[type="checkbox"]:checked {
+      background: #2a2;
+    }
+
+    .toggle-label input[type="checkbox"]::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: left 0.2s;
+    }
+
+    .toggle-label input[type="checkbox"]:checked::after {
+      left: 19px;
     }
 
     button {
@@ -80,6 +124,10 @@
   <div id="controls">
     <button id="btnConnect">Connect</button>
     <button id="btnDisconnect" disabled>Disconnect</button>
+    <label class="toggle-label">
+      <input type="checkbox" id="toggleSignal" checked>
+      Signal
+    </label>
   </div>
 
   <script>
@@ -90,6 +138,7 @@
     const signalText = document.getElementById('signalText');
     const btnConnect = document.getElementById('btnConnect');
     const btnDisconnect = document.getElementById('btnDisconnect');
+    const toggleSignal = document.getElementById('toggleSignal');
 
     // --- FPS ---
     let fps = 0, frameCount = 0, lastTime = performance.now();
@@ -109,21 +158,51 @@
     let signalInterval = null;
     let signalPending = false;
 
-    async function pollSignal() {
+    function pollSignal() {
+      if (!toggleSignal.checked) return;
       if (signalPending) return;
-      signalPending = true;
-      try {
-        const res = await fetch('http://192.168.1.17:8080/api/signal/info', {
-          signal: AbortSignal.timeout(200)
-        });
-        const json = await res.json();
-        const strength = json.wifi_signal_strength;
-        signalText.textContent = `Signal: ${strength} dBm ${signalBars(strength)}`;
-      } catch (e) {
-        signalText.textContent = e.name === 'TimeoutError' ? 'Signal: timeout' : 'Signal: N/A';
-      } finally {
-        signalPending = false;
+
+      // Use idle callback to yield priority to stream + rendering
+      const run = async (deadline) => {
+        // If we have a pending frame or very little idle time, reschedule
+        if (pendingFrame || (deadline && deadline.timeRemaining() < 10)) {
+          scheduleSignalPoll(500);
+          return;
+        }
+
+        signalPending = true;
+        try {
+          const res = await fetch('http://192.168.1.17:8080/api/signal/info', {
+            signal: AbortSignal.timeout(200)
+          });
+          const json = await res.json();
+          const strength = json.wifi_signal_strength;
+          signalText.textContent = `Signal: ${strength} dBm ${signalBars(strength)}`;
+        } catch (e) {
+          signalText.textContent = e.name === 'TimeoutError' ? 'Signal: timeout' : 'Signal: N/A';
+        } finally {
+          signalPending = false;
+        }
+      };
+
+      if (typeof scheduler !== 'undefined' && scheduler.postTask) {
+        // Chromium: explicitly background priority
+        scheduler.postTask(() => run(null), { priority: 'background' });
+      } else if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(run, { timeout: 2000 });
+      } else {
+        // Fallback: at least defer past current frame
+        setTimeout(() => run(null), 0);
       }
+    }
+
+    function scheduleSignalPoll(delay = 3000) {
+      clearInterval(signalInterval);
+      signalInterval = setTimeout(() => {
+        pollSignal();
+        // Restart regular interval after first deferred poll
+        signalInterval = setInterval(pollSignal, 3000);
+      }, delay);
     }
 
     function signalBars(dbm) {
@@ -263,8 +342,7 @@
       abortController = new AbortController();
 
       // Start signal polling
-      pollSignal();
-      signalInterval = setInterval(pollSignal, 3000);
+      scheduleSignalPoll(1000);
 
       try {
         const response = await fetch('http://192.168.1.17:8080/stream.h264', {
@@ -278,7 +356,6 @@
 
         while (true) {
           const { value, done } = await reader.read();
-          // console.log(value);
           if (done) { statusText.textContent = 'Stream ended'; break; }
 
           const chunk = concat(remainder, value);
@@ -309,6 +386,7 @@
 
     function cleanup() {
       clearInterval(signalInterval);
+      clearTimeout(signalInterval);
       signalInterval = null;
       if (pendingFrame) { pendingFrame.close(); pendingFrame = null; }
       if (decoder && decoder.state !== 'closed') decoder.close();
@@ -318,6 +396,17 @@
       btnConnect.disabled = false;
       btnDisconnect.disabled = true;
     }
+
+    toggleSignal.addEventListener('change', () => {
+      if (!toggleSignal.checked) {
+        clearInterval(signalInterval);
+        clearTimeout(signalInterval);
+        signalInterval = null;
+        signalText.textContent = 'Signal: off';
+      } else if (decoder) {
+        scheduleSignalPoll(500); // re-enable with short delay
+      }
+    });
 
     btnConnect.addEventListener('click', connect);
     btnDisconnect.addEventListener('click', disconnect);

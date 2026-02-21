@@ -16,6 +16,7 @@
 
 #define STREAM_TASK_STACK_SIZE (32 * 1024) // 32KB
 #define STREAM_TASK_PRIORITY 20
+#define STREAM_TASK_CORE_ID 1
 
 namespace ctrl
 {
@@ -123,13 +124,14 @@ namespace ctrl
           .sock = sock,
       };
 
-      xTaskCreate(
+      xTaskCreatePinnedToCore(
           stream_task,
           "stream_task",
           STREAM_TASK_STACK_SIZE,
           ctx,
           STREAM_TASK_PRIORITY,
-          nullptr);
+          nullptr,
+          STREAM_TASK_CORE_ID);
 
       // Return ESP_OK without calling httpd_resp_send — httpd will not close the socket
       return ESP_OK;
@@ -220,7 +222,7 @@ namespace ctrl
 
     static void thread_scheduler(const char *thread_name, esp_capture_thread_schedule_cfg_t *schedule_cfg)
     {
-      schedule_cfg->core_id = 1;
+      schedule_cfg->core_id = STREAM_TASK_CORE_ID;
       schedule_cfg->stack_size = STREAM_TASK_STACK_SIZE;
       schedule_cfg->priority = STREAM_TASK_PRIORITY;
     }
