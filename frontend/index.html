@@ -130,90 +130,15 @@
     </label>
   </div>
 
-  <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('bitmaprenderer');
-    const statusText = document.getElementById('statusText');
-    const fpsText = document.getElementById('fpsText');
-    const signalText = document.getElementById('signalText');
-    const btnConnect = document.getElementById('btnConnect');
-    const btnDisconnect = document.getElementById('btnDisconnect');
-    const toggleSignal = document.getElementById('toggleSignal');
+  <script id="workerCode">
 
-    // --- FPS ---
-    let fps = 0, frameCount = 0, lastTime = performance.now();
-    function updateFps() {
-      frameCount++;
-      const now = performance.now();
-      const delta = now - lastTime;
-      if (delta >= 500) {
-        fps = Math.round((frameCount / delta) * 1000);
-        frameCount = 0;
-        lastTime = now;
-        fpsText.textContent = `FPS: ${fps}`;
-      }
+    function concat(...arrays) {
+      const out = new Uint8Array(arrays.reduce((n, a) => n + a.byteLength, 0));
+      let offset = 0;
+      for (const a of arrays) { out.set(a, offset); offset += a.byteLength; }
+      return out;
     }
 
-    // --- Signal polling ---
-    let signalInterval = null;
-    let signalPending = false;
-
-    function pollSignal() {
-      if (!toggleSignal.checked) return;
-      if (signalPending) return;
-
-      // Use idle callback to yield priority to stream + rendering
-      const run = async (deadline) => {
-        // If we have a pending frame or very little idle time, reschedule
-        if (pendingFrame || (deadline && deadline.timeRemaining() < 10)) {
-          scheduleSignalPoll(500);
-          return;
-        }
-
-        signalPending = true;
-        try {
-          const res = await fetch('http://192.168.1.17:8080/api/signal/info', {
-            signal: AbortSignal.timeout(200)
-          });
-          const json = await res.json();
-          const strength = json.wifi_signal_strength;
-          signalText.textContent = `Signal: ${strength} dBm ${signalBars(strength)}`;
-        } catch (e) {
-          signalText.textContent = e.name === 'TimeoutError' ? 'Signal: timeout' : 'Signal: N/A';
-        } finally {
-          signalPending = false;
-        }
-      };
-
-      if (typeof scheduler !== 'undefined' && scheduler.postTask) {
-        // Chromium: explicitly background priority
-        scheduler.postTask(() => run(null), { priority: 'background' });
-      } else if (typeof requestIdleCallback !== 'undefined') {
-        requestIdleCallback(run, { timeout: 2000 });
-      } else {
-        // Fallback: at least defer past current frame
-        setTimeout(() => run(null), 0);
-      }
-    }
-
-    function scheduleSignalPoll(delay = 3000) {
-      clearInterval(signalInterval);
-      signalInterval = setTimeout(() => {
-        pollSignal();
-        // Restart regular interval after first deferred poll
-        signalInterval = setInterval(pollSignal, 3000);
-      }, delay);
-    }
-
-    function signalBars(dbm) {
-      if (dbm >= -50) return '▂▄▆█';
-      if (dbm >= -60) return '▂▄▆_';
-      if (dbm >= -70) return '▂▄__';
-      if (dbm >= -80) return '▂___';
-      return '____';
-    }
-
-    // --- NAL parsing ---
     function splitNalUnits(data) {
       const nals = [];
       let start = -1;
@@ -230,7 +155,12 @@
       return nals;
     }
 
-    function getNalType(nal) { return nal[0] & 0x1F; }
+    function toAvcc(nal) {
+      const buf = new ArrayBuffer(4 + nal.byteLength);
+      new DataView(buf).setUint32(0, nal.byteLength, false);
+      new Uint8Array(buf, 4).set(nal);
+      return new Uint8Array(buf);
+    }
 
     function buildExtradata(sps, pps) {
       return new Uint8Array([
@@ -241,59 +171,24 @@
       ]);
     }
 
-    function toAvcc(nal) {
-      const buf = new ArrayBuffer(4 + nal.byteLength);
-      new DataView(buf).setUint32(0, nal.byteLength, false);
-      new Uint8Array(buf, 4).set(nal);
-      return new Uint8Array(buf);
-    }
-
-    function concat(...arrays) {
-      const out = new Uint8Array(arrays.reduce((n, a) => n + a.byteLength, 0));
-      let offset = 0;
-      for (const a of arrays) { out.set(a, offset); offset += a.byteLength; }
-      return out;
-    }
-
-    // --- Decoder ---
-    let decoder = null;
-    let sps = null, pps = null;
-    let pendingFrame = null;
-    let rafScheduled = false;
-
-    function renderFrame() {
-      rafScheduled = false;
-      if (!pendingFrame) return;
-
-      createImageBitmap(pendingFrame).then(bitmap => {
-        pendingFrame.close();
-        pendingFrame = null;
-        ctx.transferFromImageBitmap(bitmap);
-        updateFps();
-      });
-    }
+    let decoder = null, sps = null, pps = null;
+    let frameCount = 0, lastFpsTime = performance.now();
 
     function createDecoder() {
       return new VideoDecoder({
         output(frame) {
-          // Resize canvas once on first frame
-          if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
-            canvas.width = frame.displayWidth;
-            canvas.height = frame.displayHeight;
+          frameCount++;
+          const now = performance.now(), delta = now - lastFpsTime;
+          if (delta >= 500) {
+            self.postMessage({ type: 'fps', fps: Math.round(frameCount / delta * 1000) });
+            frameCount = 0; lastFpsTime = now;
           }
-          // Drop previous pending frame if display hasn't caught up
-          if (pendingFrame) pendingFrame.close();
-          pendingFrame = frame;
-
-          if (!rafScheduled) {
-            rafScheduled = true;
-            requestAnimationFrame(renderFrame);
-          }
+          createImageBitmap(frame).then(bitmap => {
+            frame.close();
+            self.postMessage({ type: 'frame', bitmap }, [bitmap]);
+          });
         },
-        error(e) {
-          console.error('Decoder error:', e);
-          statusText.textContent = 'Decoder error';
-        }
+        error(e) { self.postMessage({ type: 'error', message: e.message }); }
       });
     }
 
@@ -302,13 +197,13 @@
       let isKey = false;
 
       for (const nal of nals) {
-        const type = getNalType(nal);
+        const type = nal[0] & 0x1F;
         if (type === 7) { sps = nal; continue; }
         if (type === 8) { pps = nal; continue; }
 
         if (sps && pps && decoder.state === 'unconfigured') {
           decoder.configure({
-            codec: `avc1.${sps[1].toString(16).padStart(2, '0')}${sps[2].toString(16).padStart(2, '0')}${sps[3].toString(16).padStart(2, '0')}`,
+            codec: 'avc1.42c029',
             description: buildExtradata(sps, pps),
             optimizeForLatency: true,
           });
@@ -327,36 +222,25 @@
       }));
     }
 
-    // --- Stream control ---
     let abortController = null;
 
-    async function connect() {
-      btnConnect.disabled = true;
-      btnDisconnect.disabled = false;
-      statusText.textContent = 'Connecting...';
-
-      // Reset state
+    async function startStream(url) {
       sps = null; pps = null;
-      if (pendingFrame) { pendingFrame.close(); pendingFrame = null; }
-      decoder = createDecoder();
+      frameCount = 0; lastFpsTime = performance.now();
       abortController = new AbortController();
-
-      // Start signal polling
-      scheduleSignalPoll(1000);
+      decoder = createDecoder();
 
       try {
-        const response = await fetch('http://192.168.1.17:8080/stream.h264', {
-          signal: abortController.signal
-        });
+        const response = await fetch(url, { signal: abortController.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        self.postMessage({ type: 'status', text: 'Streaming' });
 
-        statusText.textContent = 'Streaming';
         const reader = response.body.getReader();
         let remainder = new Uint8Array(0);
 
         while (true) {
           const { value, done } = await reader.read();
-          if (done) { statusText.textContent = 'Stream ended'; break; }
+          if (done) { self.postMessage({ type: 'status', text: 'Stream ended' }); break; }
 
           const chunk = concat(remainder, value);
           const nals = splitNalUnits(chunk);
@@ -369,43 +253,132 @@
           }
         }
       } catch (e) {
-        if (e.name === 'AbortError') {
-          statusText.textContent = 'Disconnected';
-        } else {
-          statusText.textContent = `Error: ${e.message}`;
-          console.error(e);
-        }
+        self.postMessage({ type: 'status', text: e.name === 'AbortError' ? 'Disconnected' : `Error: ${e.message}` });
       } finally {
-        cleanup();
+        if (decoder && decoder.state !== 'closed') decoder.close();
+        decoder = null;
+        self.postMessage({ type: 'done' });
       }
     }
 
-    function disconnect() {
-      if (abortController) abortController.abort();
+    self.onmessage = (e) => {
+      if (e.data.type === 'start') startStream(e.data.url);
+      if (e.data.type === 'stop' && abortController) abortController.abort();
+    };
+
+  </script>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('bitmaprenderer');
+    const statusText = document.getElementById('statusText');
+    const fpsText = document.getElementById('fpsText');
+    const signalText = document.getElementById('signalText');
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const toggleSignal = document.getElementById('toggleSignal');
+
+    function createWorker() {
+      const blob = new Blob([document.getElementById('workerCode').textContent], { type: 'application/javascript' });
+      return new Worker(URL.createObjectURL(blob));
     }
 
+    let worker = null, pendingBitmap = null, rafScheduled = false;
+
+    function renderFrame() {
+      rafScheduled = false;
+      if (!pendingBitmap) return;
+      ctx.transferFromImageBitmap(pendingBitmap);
+      pendingBitmap = null;
+    }
+
+    function onWorkerMessage(e) {
+      const msg = e.data;
+      switch (msg.type) {
+        case 'frame':
+          if (msg.bitmap.width !== canvas.width || msg.bitmap.height !== canvas.height) {
+            canvas.width = msg.bitmap.width; canvas.height = msg.bitmap.height;
+          }
+          if (pendingBitmap) pendingBitmap.close();
+          pendingBitmap = msg.bitmap;
+          if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(renderFrame); }
+          break;
+        case 'fps': fpsText.textContent = `FPS: ${msg.fps}`; break;
+        case 'status': statusText.textContent = msg.text; break;
+        case 'error': statusText.textContent = `Error: ${msg.message}`; break;
+        case 'done': cleanup(); break;
+      }
+    }
+
+    // ---- Signal polling ----
+
+    let signalInterval = null, signalPending = false;
+
+    function pollSignal() {
+      if (!toggleSignal.checked || signalPending) return;
+
+      const run = async (deadline) => {
+        if (pendingBitmap || (deadline && deadline.timeRemaining() < 10)) { scheduleSignalPoll(500); return; }
+        signalPending = true;
+        try {
+          const res = await fetch('http://192.168.1.17:8080/api/signal/info', { signal: AbortSignal.timeout(200) });
+          const { wifi_signal_strength: s } = await res.json();
+          signalText.textContent = `Signal: ${s} dBm ${signalBars(s)}`;
+        } catch (e) {
+          signalText.textContent = e.name === 'TimeoutError' ? 'Signal: timeout' : 'Signal: N/A';
+        } finally {
+          signalPending = false;
+        }
+      };
+
+      if (typeof scheduler !== 'undefined' && scheduler.postTask)
+        scheduler.postTask(() => run(null), { priority: 'background' });
+      else if (typeof requestIdleCallback !== 'undefined')
+        requestIdleCallback(run, { timeout: 2000 });
+      else
+        setTimeout(() => run(null), 0);
+    }
+
+    function scheduleSignalPoll(delay = 3000) {
+      clearTimeout(signalInterval); clearInterval(signalInterval);
+      signalInterval = setTimeout(() => { pollSignal(); signalInterval = setInterval(pollSignal, 3000); }, delay);
+    }
+
+    function signalBars(dbm) {
+      if (dbm >= -50) return '▂▄▆█';
+      if (dbm >= -60) return '▂▄▆_';
+      if (dbm >= -70) return '▂▄__';
+      if (dbm >= -80) return '▂___';
+      return '____';
+    }
+
+    // ---- Connect / disconnect ----
+
+    function connect() {
+      btnConnect.disabled = true; btnDisconnect.disabled = false;
+      statusText.textContent = 'Connecting...'; fpsText.textContent = 'FPS: --';
+      if (pendingBitmap) { pendingBitmap.close(); pendingBitmap = null; }
+      worker = createWorker();
+      worker.onmessage = onWorkerMessage;
+      worker.postMessage({ type: 'start', url: 'http://192.168.1.17:8080/stream.h264' });
+      scheduleSignalPoll(1000);
+    }
+
+    function disconnect() { if (worker) worker.postMessage({ type: 'stop' }); }
+
     function cleanup() {
-      clearInterval(signalInterval);
-      clearTimeout(signalInterval);
-      signalInterval = null;
-      if (pendingFrame) { pendingFrame.close(); pendingFrame = null; }
-      if (decoder && decoder.state !== 'closed') decoder.close();
-      decoder = null;
-      fpsText.textContent = 'FPS: --';
-      signalText.textContent = 'Signal: --';
-      btnConnect.disabled = false;
-      btnDisconnect.disabled = true;
+      clearTimeout(signalInterval); clearInterval(signalInterval); signalInterval = null;
+      if (pendingBitmap) { pendingBitmap.close(); pendingBitmap = null; }
+      if (worker) { worker.terminate(); worker = null; }
+      fpsText.textContent = 'FPS: --'; signalText.textContent = 'Signal: --';
+      btnConnect.disabled = false; btnDisconnect.disabled = true;
     }
 
     toggleSignal.addEventListener('change', () => {
       if (!toggleSignal.checked) {
-        clearInterval(signalInterval);
-        clearTimeout(signalInterval);
-        signalInterval = null;
-        signalText.textContent = 'Signal: off';
-      } else if (decoder) {
-        scheduleSignalPoll(500); // re-enable with short delay
-      }
+        clearTimeout(signalInterval); clearInterval(signalInterval);
+        signalInterval = null; signalText.textContent = 'Signal: off';
+      } else if (worker) { scheduleSignalPoll(500); }
     });
 
     btnConnect.addEventListener('click', connect);

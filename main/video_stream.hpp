@@ -98,6 +98,11 @@ namespace ctrl
     {
       instance_->logger_.info("Client connected");
       int sock = httpd_req_to_sockfd(req);
+      struct timeval tv = {
+          .tv_sec = 5,
+          .tv_usec = 0,
+      };
+      setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
       if (sock < 0)
       {
         instance_->logger_.error("Failed to get socket fd");
@@ -190,6 +195,7 @@ namespace ctrl
             send(ctx->sock, "\r\n", 2, 0) < 0;
 
         esp_capture_sink_release_frame(ctx->sink, &frame);
+        vTaskDelay(pdMS_TO_TICKS(1)); // yield after every frame — keeps IDLE scheduled
 
         if (disconnected)
         {
