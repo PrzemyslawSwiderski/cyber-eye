@@ -163,6 +163,9 @@ namespace ctrl
       esp_capture_stream_frame_t frame = {};
       frame.stream_type = ESP_CAPTURE_STREAM_TYPE_VIDEO;
 
+      int fps_frame_count = 0;
+      int64_t fps_last_time = esp_timer_get_time(); // microseconds
+
       while (true)
       {
         esp_err_t err = esp_capture_sink_acquire_frame(ctx->sink, &frame, true);
@@ -193,6 +196,18 @@ namespace ctrl
         }
 
         frame_count++;
+        fps_frame_count++;
+
+        // Log FPS every 3 seconds
+        int64_t now = esp_timer_get_time();
+        int64_t elapsed_us = now - fps_last_time;
+        if (elapsed_us >= 3'000'000)
+        {
+          float fps = fps_frame_count / (elapsed_us / 1'000'000.0f);
+          instance_->logger_.info("Streaming FPS: {:.1f}, total frames={}, dropped={}", fps, frame_count, dropped_count);
+          fps_frame_count = 0;
+          fps_last_time = now;
+        }
       }
 
       // Send chunked EOF
