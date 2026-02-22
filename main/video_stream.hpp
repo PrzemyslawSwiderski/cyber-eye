@@ -1,5 +1,8 @@
 #pragma once
 
+#include <linux/videodev2.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
 #include <mutex>
 #include <sys/socket.h>
 #include "logger.hpp"
@@ -14,6 +17,7 @@
 #include "esp_capture_advance.h"
 #include "settings.h"
 
+#define CAMERA_DEVICE_NAME "/dev/video0"
 #define STREAM_TASK_STACK_SIZE (32 * 1024) // 32KB
 #define STREAM_TASK_PRIORITY 20
 #define STREAM_TASK_CORE_ID 1
@@ -233,10 +237,44 @@ namespace ctrl
       schedule_cfg->priority = STREAM_TASK_PRIORITY;
     }
 
+    static void set_camera_controls(const char *dev_name)
+    {
+      int fd = open(dev_name, O_RDWR);
+      if (fd < 0)
+      {
+        return;
+      }
+
+      // Helper lambda/struct to set a control
+      auto set_ctrl = [fd](uint32_t id, int32_t value)
+      {
+        struct v4l2_control ctrl = {
+            .id = id,
+            .value = value,
+        };
+        ioctl(fd, VIDIOC_S_CTRL, &ctrl);
+      };
+
+      // Increase brightness (typical range: -64 to 64, default 0)
+      set_ctrl(V4L2_CID_BRIGHTNESS, 60);
+
+      // Increase exposure (if manual mode is supported)
+      set_ctrl(V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_MANUAL);
+      set_ctrl(V4L2_CID_EXPOSURE_ABSOLUTE, 500); // value depends on sensor
+
+      // Increase gain (typical range: 0–255)
+      set_ctrl(V4L2_CID_GAIN, 80);
+
+      // Or increase contrast
+      set_ctrl(V4L2_CID_CONTRAST, 30);
+
+      close(fd);
+    }
+
     static esp_capture_video_src_if_t *create_video_source()
     {
       esp_capture_video_v4l2_src_cfg_t v4l2_cfg = {
-          .dev_name = "/dev/video0",
+          .dev_name = CAMERA_DEVICE_NAME,
           .buf_count = 8,
       };
       return esp_capture_new_video_v4l2_src(&v4l2_cfg);
@@ -250,6 +288,7 @@ namespace ctrl
         instance_->logger_.error("Fail to create video source");
         return -1;
       }
+      set_camera_controls(CAMERA_DEVICE_NAME);
 
       esp_capture_cfg_t capture_cfg = {
           .sync_mode = ESP_CAPTURE_SYNC_MODE_SYSTEM,

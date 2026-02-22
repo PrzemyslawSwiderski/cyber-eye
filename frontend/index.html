@@ -124,10 +124,6 @@
   <div id="controls">
     <button id="btnConnect">Connect</button>
     <button id="btnDisconnect" disabled>Disconnect</button>
-    <label class="toggle-label">
-      <input type="checkbox" id="toggleSignal" checked>
-      Signal
-    </label>
   </div>
 
   <script id="workerCode">
@@ -276,7 +272,6 @@
     const signalText = document.getElementById('signalText');
     const btnConnect = document.getElementById('btnConnect');
     const btnDisconnect = document.getElementById('btnDisconnect');
-    const toggleSignal = document.getElementById('toggleSignal');
 
     function createWorker() {
       const blob = new Blob([document.getElementById('workerCode').textContent], { type: 'application/javascript' });
@@ -315,8 +310,6 @@
     let signalInterval = null, signalPending = false;
 
     function pollSignal() {
-      if (!toggleSignal.checked || signalPending) return;
-
       const run = async (deadline) => {
         if (pendingBitmap || (deadline && deadline.timeRemaining() < 10)) { scheduleSignalPoll(500); return; }
         signalPending = true;
@@ -373,13 +366,6 @@
       fpsText.textContent = 'FPS: --'; signalText.textContent = 'Signal: --';
       btnConnect.disabled = false; btnDisconnect.disabled = true;
     }
-
-    toggleSignal.addEventListener('change', () => {
-      if (!toggleSignal.checked) {
-        clearTimeout(signalInterval); clearInterval(signalInterval);
-        signalInterval = null; signalText.textContent = 'Signal: off';
-      } else if (worker) { scheduleSignalPoll(500); }
-    });
 
     btnConnect.addEventListener('click', connect);
     btnDisconnect.addEventListener('click', disconnect);
