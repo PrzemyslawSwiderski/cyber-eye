@@ -26,7 +26,7 @@
   "clangd.path": "/home/pswidersk/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
   "clangd.arguments": [
     "--background-index",
-    "--query-driver=/home/pswidersk/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+    "--query-driver=**",
     "--compile-commands-dir=/home/pswidersk/REPOS/cyber-eye/build"
   ],
   "idf.flashType": "UART",

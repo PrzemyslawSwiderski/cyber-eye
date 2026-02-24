@@ -58,7 +58,7 @@ ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -vf set
 ```
 media.rdd-process.enabled=false
 media.ffmpeg.vaapi.enabled=true
-javascript.options.mem.max=512
+javascript.options.mem.max=-1
 javascript.options.mem.gc_incremental=true
 javascript.options.mem.gc_incremental_slice_ms=5
 javascript.options.mem.gc_compacting=false

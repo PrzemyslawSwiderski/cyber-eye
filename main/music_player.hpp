@@ -103,8 +103,8 @@ namespace audio
               },
               .task_config = {
                   .name = "music_ctrl",
-                  .stack_size_bytes = 4096,
-                  .priority = 5,
+                  .stack_size_bytes = 8 * 1024,
+                  .priority = 15,
                   .core_id = 0,
               }});
 

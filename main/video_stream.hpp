@@ -19,8 +19,12 @@
 
 #define CAMERA_DEVICE_NAME "/dev/video0"
 #define STREAM_TASK_STACK_SIZE (32 * 1024) // 32KB
-#define STREAM_TASK_PRIORITY 20
+#define STREAM_TASK_PRIORITY 18
 #define STREAM_TASK_CORE_ID 1
+
+#define VENC_TASK_STACK_SIZE (32 * 1024) // 32KB
+#define VENC_TASK_PRIORITY 17
+#define VENC_TASK_CORE_ID 0
 
 namespace ctrl
 {
@@ -102,17 +106,7 @@ namespace ctrl
     {
       instance_->logger_.info("Client connected");
       int sock = httpd_req_to_sockfd(req);
-      struct timeval tv = {
-          .tv_sec = 5,
-          .tv_usec = 0,
-      };
-      setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-      if (sock < 0)
-      {
-        instance_->logger_.error("Failed to get socket fd");
-        return ESP_FAIL;
-      }
-
+      
       // Send HTTP headers directly on the raw socket before handing it off
       const char *headers =
           "HTTP/1.1 200 OK\r\n"
@@ -232,9 +226,9 @@ namespace ctrl
 
     static void thread_scheduler(const char *thread_name, esp_capture_thread_schedule_cfg_t *schedule_cfg)
     {
-      schedule_cfg->core_id = STREAM_TASK_CORE_ID;
-      schedule_cfg->stack_size = STREAM_TASK_STACK_SIZE;
-      schedule_cfg->priority = STREAM_TASK_PRIORITY;
+      schedule_cfg->core_id = VENC_TASK_CORE_ID;
+      schedule_cfg->stack_size = VENC_TASK_STACK_SIZE;
+      schedule_cfg->priority = VENC_TASK_PRIORITY;
     }
 
     static void set_camera_controls(const char *dev_name)
