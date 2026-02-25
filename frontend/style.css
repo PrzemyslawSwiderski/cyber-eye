@@ -1,0 +1,57 @@
+body {
+  background: #000;
+}
+
+/* ---- Top bar ---- */
+
+#topBar {
+  background: #111;
+  flex-shrink: 0;
+}
+
+#inputBaseUrl:focus {
+  border-color: #2a2 !important;
+  box-shadow: 0 0 0 0.2rem rgba(34, 170, 34, .25);
+}
+
+/* ---- Viewport ---- */
+
+#viewport {
+  background: #000;
+}
+
+#canvasWrap {
+  position: absolute;
+  inset: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(180deg);
+}
+
+/* ---- HUD overlay — sits above canvas in its own stacking context ---- */
+
+#overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  /* explicit values, nothing inherited from body or Bootstrap */
+  color: #00ff00;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1.4;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(0, 255, 0, 0.35);
+  border-radius: 4px;
+  padding: 6px 10px;
+  pointer-events: none;
+  user-select: none;
+}

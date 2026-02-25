@@ -5,30 +5,39 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>👁️ Cyber Eye</title>
-  <link rel="stylesheet" href="main.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 
-<body>
+<body class="bg-black d-flex flex-column min-vh-100">
 
-  <div id="wrapper">
-    <canvas id="canvas"></canvas>
+  <!-- Top bar -->
+  <div id="topBar" class="d-flex align-items-center gap-2 px-3 py-2 border-bottom border-secondary">
+    <label for="inputBaseUrl" class="text-secondary text-nowrap small mb-0">Base URL</label>
+    <input id="inputBaseUrl" type="text" value="http://192.168.1.17:8080" spellcheck="false"
+      class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:280px;" />
+    <button id="btnConnect" class="btn btn-sm btn-success ms-1">Connect</button>
+    <button id="btnDisconnect" class="btn btn-sm btn-danger" disabled>Disconnect</button>
+
+  </div>
+
+  <!-- Viewport: overlay + canvas stacked via CSS, not DOM nesting -->
+  <div id="viewport" class="flex-grow-1 position-relative overflow-hidden">
+
+    <div id="canvasWrap" class="w-100 h-100">
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- HUD overlay — sibling of canvasWrap, not child -->
     <div id="overlay">
       <span id="statusText">Disconnected</span>
       <span id="fpsText">FPS: --</span>
       <span id="signalText">Signal: --</span>
     </div>
+
   </div>
 
-  <div id="urlBar">
-    <label for="inputBaseUrl">Base URL</label>
-    <input id="inputBaseUrl" type="text" value="http://192.168.1.17:8080" spellcheck="false" />
-  </div>
-
-  <div id="controls">
-    <button id="btnConnect">Connect</button>
-    <button id="btnDisconnect" disabled>Disconnect</button>
-    <button id="btnFullscreen" title="Fullscreen">⛶</button>
-  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   <script src="main.js"></script>
 </body>
 

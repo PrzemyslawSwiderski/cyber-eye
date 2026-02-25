@@ -3,13 +3,12 @@ const DEFAULT_BASE_URL = 'http://192.168.1.17:8080';
 // ---- DOM refs ----
 
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('bitmaprenderer');
+const ctx = canvas.getContext('2d');
 const statusText = document.getElementById('statusText');
 const fpsText = document.getElementById('fpsText');
 const signalText = document.getElementById('signalText');
 const btnConnect = document.getElementById('btnConnect');
 const btnDisconnect = document.getElementById('btnDisconnect');
-const btnFullscreen = document.getElementById('btnFullscreen');
 const inputBaseUrl = document.getElementById('inputBaseUrl');
 
 function getBaseUrl() {
@@ -18,6 +17,19 @@ function getBaseUrl() {
 
 function getStreamUrl() { return `${getBaseUrl()}/stream.h264`; }
 function getSignalUrl() { return `${getBaseUrl()}/api/signal/info`; }
+
+// Keep canvas pixel dimensions matched to its container size
+const canvasWrap = document.getElementById('canvasWrap');
+new ResizeObserver(entries => {
+  for (const entry of entries) {
+    const { inlineSize: w, blockSize: h } = entry.contentBoxSize[0];
+    const rw = Math.round(w), rh = Math.round(h);
+    if (canvas.width !== rw || canvas.height !== rh) {
+      canvas.width = rw;
+      canvas.height = rh;
+    }
+  }
+}).observe(canvasWrap);
 
 // ---- Worker management ----
 
@@ -32,17 +44,22 @@ function createWorker() {
 function renderFrame() {
   rafScheduled = false;
   if (!pendingBitmap) return;
-  ctx.transferFromImageBitmap(pendingBitmap);
+
+  const cw = canvas.width, ch = canvas.height;
+  const vw = pendingBitmap.width, vh = pendingBitmap.height;
+  const scale = Math.min(cw / vw, ch / vh);
+  const dw = vw * scale, dh = vh * scale;
+  const dx = (cw - dw) / 2, dy = (ch - dh) / 2;
+
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.drawImage(pendingBitmap, dx, dy, dw, dh);
+  pendingBitmap.close();
   pendingBitmap = null;
 }
 
 function onWorkerMessage({ data: msg }) {
   switch (msg.type) {
     case 'frame':
-      if (msg.bitmap.width !== canvas.width || msg.bitmap.height !== canvas.height) {
-        canvas.width = msg.bitmap.width;
-        canvas.height = msg.bitmap.height;
-      }
       if (pendingBitmap) pendingBitmap.close();
       pendingBitmap = msg.bitmap;
       if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(renderFrame); }
@@ -143,19 +160,7 @@ function cleanup() {
   inputBaseUrl.disabled = false;
 }
 
-// ---- Fullscreen ----
-
-function toggleFullscreen() {
-  const wrapper = document.getElementById('wrapper');
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen).call(wrapper);
-  } else {
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-  }
-}
-
 // ---- Event listeners ----
 
 btnConnect.addEventListener('click', connect);
 btnDisconnect.addEventListener('click', disconnect);
-btnFullscreen.addEventListener('click', toggleFullscreen);
