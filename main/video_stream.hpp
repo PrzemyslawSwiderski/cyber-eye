@@ -15,15 +15,14 @@
 #include "esp_video_enc_default.h"
 #include "esp_gmf_app_setup_peripheral.h"
 #include "esp_capture_advance.h"
-#include "settings.h"
 
 #define CAMERA_DEVICE_NAME "/dev/video0"
-#define STREAM_TASK_STACK_SIZE (32 * 1024) // 32KB
-#define STREAM_TASK_PRIORITY 17
+#define STREAM_TASK_STACK_SIZE (8 * 1024) // 8KB
+#define STREAM_TASK_PRIORITY 12
 #define STREAM_TASK_CORE_ID 1
 
-#define VENC_TASK_STACK_SIZE (32 * 1024) // 32KB
-#define VENC_TASK_PRIORITY 20 // must be higher than STREAM_TASK_PRIORITY to avoid starvation
+#define VENC_TASK_STACK_SIZE (16 * 1024) // 16KB
+#define VENC_TASK_PRIORITY 14            // must be higher than STREAM_TASK_PRIORITY to avoid starvation
 #define VENC_TASK_CORE_ID 1
 
 namespace ctrl
@@ -106,7 +105,7 @@ namespace ctrl
     {
       instance_->logger_.info("Client connected");
       int sock = httpd_req_to_sockfd(req);
-      
+
       // Send HTTP headers directly on the raw socket before handing it off
       const char *headers =
           "HTTP/1.1 200 OK\r\n"
@@ -161,6 +160,7 @@ namespace ctrl
 
     static void stream_task(void *arg)
     {
+      instance_->logger_.info("Stream task");
       auto *ctx = static_cast<StreamTaskCtx *>(arg);
 
       int frame_count = 0;

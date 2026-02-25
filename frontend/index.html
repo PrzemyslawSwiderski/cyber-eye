@@ -18,8 +18,8 @@
       class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:280px;" />
     <button id="btnConnect" class="btn btn-sm btn-success ms-1">Connect</button>
     <button id="btnDisconnect" class="btn btn-sm btn-danger" disabled>Disconnect</button>
-
   </div>
+  <button id="topBarToggle" title="Toggle toolbar">▲</button>
 
   <!-- Viewport: overlay + canvas stacked via CSS, not DOM nesting -->
   <div id="viewport" class="flex-grow-1 position-relative overflow-hidden">
@@ -29,10 +29,25 @@
     </div>
 
     <!-- HUD overlay — sibling of canvasWrap, not child -->
-    <div id="overlay">
+    <div id="overlay" class="hud-panel">
       <span id="statusText">Disconnected</span>
       <span id="fpsText">FPS: --</span>
       <span id="signalText">Signal: --</span>
+      <span id="tempText">Temp: --</span>
+    </div>
+
+    <!-- Settings menu -->
+    <div id="settings">
+      <button id="settingsToggle" class="hud-btn">⚙ Adjust</button>
+      <div id="settingsPanel" class="hud-panel">
+        <label>Brightness <span id="brightnessVal">100%</span></label>
+        <input type="range" id="brightness" min="0" max="200" value="100" />
+        <label>Contrast <span id="contrastVal">100%</span></label>
+        <input type="range" id="contrast" min="0" max="200" value="100" />
+        <label>Exposure <span id="exposureVal">0</span></label>
+        <input type="range" id="exposure" min="-100" max="100" value="0" />
+        <button id="settingsReset" class="hud-btn">Reset</button>
+      </div>
     </div>
 
   </div>

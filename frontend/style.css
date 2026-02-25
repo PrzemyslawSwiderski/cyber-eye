@@ -1,8 +1,64 @@
-body {
-  background: #000;
+/* ---- Shared HUD look ---- */
+
+.hud-panel {
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(0, 255, 0, 0.35);
+  border-radius: 4px;
+  color: #00ff00;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
 }
 
-/* ---- Top bar ---- */
+.hud-btn {
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(0, 255, 0, 0.35);
+  border-radius: 4px;
+  color: #00ff00;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 5px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hud-btn:hover {
+  background: rgba(0, 40, 0, 0.85);
+}
+
+/* ---- Top bar toggle ---- */
+
+#topBarToggle {
+  display: block;
+  margin: 0 auto;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  color: #666;
+  font-size: 10px;
+  padding: 1px 16px 2px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+  z-index: 1;
+}
+
+#topBarToggle:hover {
+  background: #222;
+  color: #aaa;
+}
+
+#topBar.collapsed {
+  display: none !important;
+}
+
+#topBarToggle.collapsed {
+  border-top: 1px solid #333;
+  border-radius: 0 0 6px 6px;
+}
 
 #topBar {
   background: #111;
@@ -32,7 +88,7 @@ canvas {
   transform: rotate(180deg);
 }
 
-/* ---- HUD overlay — sits above canvas in its own stacking context ---- */
+/* ---- HUD overlay ---- */
 
 #overlay {
   position: absolute;
@@ -42,16 +98,56 @@ canvas {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  /* explicit values, nothing inherited from body or Bootstrap */
-  color: #00ff00;
-  font-family: monospace;
-  font-size: 13px;
-  font-weight: bold;
-  line-height: 1.4;
-  background: rgba(0, 0, 0, 0.78);
-  border: 1px solid rgba(0, 255, 0, 0.35);
-  border-radius: 4px;
   padding: 6px 10px;
+  line-height: 1.4;
   pointer-events: none;
   user-select: none;
+}
+
+/* ---- Settings menu ---- */
+
+#settings {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+#settingsPanel {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  min-width: 200px;
+}
+
+#settingsPanel.open {
+  display: flex;
+}
+
+#settingsPanel label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: -2px;
+}
+
+#settingsPanel label span {
+  color: rgba(0, 255, 0, 0.65);
+}
+
+#settingsPanel input[type="range"] {
+  width: 100%;
+  accent-color: #00ff00;
+  cursor: pointer;
+}
+
+#settingsReset {
+  margin-top: 4px;
+  font-size: 12px;
+  padding: 4px;
 }

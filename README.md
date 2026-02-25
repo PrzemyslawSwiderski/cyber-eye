@@ -95,3 +95,5 @@ I (00:02:04.558) : │ FtpServer::acce   │ 7fffffff │ 0           │   0.00
 I (00:02:04.570) : │ Tmr Svc           │ 7fffffff │ 0           │   0.00% │ 1        │ 1720      │ Blocked    │ Intr  │
 I (00:02:04.591) : └───────────────────┴──────────┴─────────────┴─────────┴──────────┴───────────┴────────────┴───────┘
 ```
+
+### OV5647 camera config location -> `managed_components/espressif__esp_cam_sensor/sensors/ov5647/cfg/ov5647_default.json`

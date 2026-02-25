@@ -5,18 +5,9 @@
 
 #include "ftp_mod.hpp"
 #include "wifi_mod.hpp"
-// #include "control_mod.hpp"
-// #include "cam_server.h"
-#include "video_capture.h"
-#include "video_mod.h"
 #include "music_player.hpp"
 #include "http_controller.hpp"
 #include "file_system.hpp"
-
-#include "esp_video_enc_default.h"
-#include "jpeg_image.hpp"
-#include "rtsp_server.hpp"
-#include "rtsp_client.hpp"
 
 #include "esp_board_manager.h"
 #include "esp_gmf_app_cli.h"
@@ -70,10 +61,6 @@ extern "C" void app_main()
 
   g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
   g_http_controller->start_task();
-
-  // video_capture_run_with_muxer(5000);
-  // video_capture_run_with_muxer_ts(5000);
-  // video_capture_run_with_muxer_http(50000);
 
   while (1)
   {

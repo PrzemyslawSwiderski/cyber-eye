@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include "driver/temperature_sensor.h"
 #include "music_player.hpp"
 #include "video_stream.hpp"
 #include "logger.hpp"
@@ -40,6 +41,7 @@ namespace ctrl
     ~HttpController()
     {
       stop();
+      deinit_temp_sensor();
     }
 
     void start_task()
@@ -49,7 +51,7 @@ namespace ctrl
         logger_.warn("HTTP server already running");
         return;
       }
-
+      init_temp_sensor();
       start_server();
     }
 
@@ -69,6 +71,7 @@ namespace ctrl
     espp::Logger logger_;
     httpd_handle_t http_server_{nullptr};
     std::unique_ptr<VideoStream> video_stream_;
+    temperature_sensor_handle_t temp_sensor_;
     static HttpController *instance_;
 
     bool start_server()
@@ -131,6 +134,22 @@ namespace ctrl
           .handler = handler,
           .user_ctx = nullptr};
       httpd_register_uri_handler(http_server_, &uri_config);
+    }
+
+    void init_temp_sensor()
+    {
+      temperature_sensor_config_t config = {
+          .range_min = 20,  // expected min temp °C
+          .range_max = 100, // expected max temp °C
+      };
+      temperature_sensor_install(&config, &temp_sensor_);
+      temperature_sensor_enable(temp_sensor_);
+    }
+
+    void deinit_temp_sensor()
+    {
+      temperature_sensor_disable(temp_sensor_);
+      temperature_sensor_uninstall(temp_sensor_);
     }
 
     // Helper: Log incoming request
@@ -323,9 +342,13 @@ namespace ctrl
       auto start = esp_timer_get_time(); // microseconds
 
       auto signal_strength = wifi::get_signal_strength();
-
       cJSON *root = cJSON_CreateObject();
       cJSON_AddNumberToObject(root, "wifi_signal_strength", signal_strength);
+
+      float temp = 0.0f;
+      temperature_sensor_get_celsius(instance_->temp_sensor_, &temp);
+      cJSON_AddNumberToObject(root, "temperature_sensor_get_celsius", temp);
+
       send_json(req, root);
 
       auto elapsed_ms = (esp_timer_get_time() - start) / 1000.0f;
