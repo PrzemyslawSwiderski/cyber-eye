@@ -19,12 +19,12 @@
 
 #define CAMERA_DEVICE_NAME "/dev/video0"
 #define STREAM_TASK_STACK_SIZE (32 * 1024) // 32KB
-#define STREAM_TASK_PRIORITY 18
+#define STREAM_TASK_PRIORITY 17
 #define STREAM_TASK_CORE_ID 1
 
 #define VENC_TASK_STACK_SIZE (32 * 1024) // 32KB
-#define VENC_TASK_PRIORITY 17
-#define VENC_TASK_CORE_ID 0
+#define VENC_TASK_PRIORITY 20 // must be higher than STREAM_TASK_PRIORITY to avoid starvation
+#define VENC_TASK_CORE_ID 1
 
 namespace ctrl
 {
@@ -173,7 +173,7 @@ namespace ctrl
 
       while (true)
       {
-        esp_err_t err = esp_capture_sink_acquire_frame(ctx->sink, &frame, true);
+        esp_err_t err = esp_capture_sink_acquire_frame(ctx->sink, &frame, false);
         if (err != ESP_CAPTURE_ERR_OK)
         {
           dropped_count++;
