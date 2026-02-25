@@ -50,7 +50,7 @@ CONFIG_VFS_MAX_COUNT=20
 Use `ffplay` for the minimal latency:
 
 ```
-ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -vf setpts=0 http://192.168.1.17:8080/stream.h264
+ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -vf "setpts=0,hflip,vflip" http://192.168.1.17:8080/stream.h264
 ```
 
 ### Firefox flags for smooth video (`about:config` page)
@@ -63,4 +63,35 @@ javascript.options.mem.gc_incremental=true
 javascript.options.mem.gc_incremental_slice_ms=5
 javascript.options.mem.gc_compacting=false
 dom.ipc.processCount=1
+```
+
+### Proper 34 FPS `tasks` output
+
+```
+I (00:02:04.204) : ┌───────────────────┬──────────┬─────────────┬─────────┬──────────┬───────────┬────────────┬───────┐
+I (00:02:04.227) : │ Task              │ Core ID  │ Run Time    │ CPU     │ Priority │ Stack HWM │ State      │ Stack │
+I (00:02:04.239) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
+I (00:02:04.272) : │ IDLE0             │ 0        │ 965208      │  48.60% │ 0        │ 1240      │ Ready      │ Intr  │
+I (00:02:04.284) : │ main              │ 0        │ 256         │   0.01% │ 1        │ 588       │ Blocked    │ Intr  │
+I (00:02:04.296) : │ sys_evt           │ 0        │ 0           │   0.00% │ 20       │ 516       │ Blocked    │ Intr  │
+I (00:02:04.308) : │ esp_timer         │ 0        │ 0           │   0.00% │ 22       │ 3792      │ Suspended  │ Intr  │
+I (00:02:04.319) : │ httpd             │ 0        │ 0           │   0.00% │ 5        │ 37796     │ Blocked    │ Intr  │
+I (00:02:04.331) : │ ipc0              │ 0        │ 0           │   0.00% │ 24       │ 728       │ Suspended  │ Intr  │
+I (00:02:04.342) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
+I (00:02:04.376) : │ IDLE1             │ 1        │ 913529      │  46.00% │ 0        │ 1232      │ Ready      │ Intr  │
+I (00:02:04.387) : │ venc_0            │ 1        │ 48185       │   2.43% │ 20       │ 30188     │ Blocked    │ Extr  │
+I (00:02:04.399) : │ tiT               │ 1        │ 14394       │   0.72% │ 19       │ 6752      │ Blocked    │ Intr  │
+I (00:02:04.410) : │ stream_task       │ 1        │ 7687        │   0.39% │ 17       │ 29876     │ Blocked    │ Intr  │
+I (00:02:04.432) : │ ipc1              │ 1        │ 0           │   0.00% │ 24       │ 720       │ Suspended  │ Intr  │
+I (00:02:04.444) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
+I (00:02:04.467) : │ sdio_read         │ 7fffffff │ 21273       │   1.07% │ 23       │ 3200      │ Blocked    │ Intr  │
+I (00:02:04.478) : │ sdio_write        │ 7fffffff │ 7638        │   0.38% │ 23       │ 4336      │ Blocked    │ Intr  │
+I (00:02:04.500) : │ console_repl      │ 7fffffff │ 5774        │   0.29% │ 2        │ 2200      │ Running    │ Intr  │
+I (00:02:04.512) : │ sdio_process_rx   │ 7fffffff │ 2693        │   0.14% │ 23       │ 3032      │ Blocked    │ Intr  │
+I (00:02:04.524) : │ sdio_rx_buf       │ 7fffffff │ 1452        │   0.07% │ 23       │ 1208      │ Blocked    │ Intr  │
+I (00:02:04.535) : │ rpc_rx            │ 7fffffff │ 0           │   0.00% │ 23       │ 2440      │ Blocked    │ Intr  │
+I (00:02:04.547) : │ rpc_tx            │ 7fffffff │ 0           │   0.00% │ 23       │ 3304      │ Blocked    │ Intr  │
+I (00:02:04.558) : │ FtpServer::acce   │ 7fffffff │ 0           │   0.00% │ 5        │ 3300      │ Blocked    │ Intr  │
+I (00:02:04.570) : │ Tmr Svc           │ 7fffffff │ 0           │   0.00% │ 1        │ 1720      │ Blocked    │ Intr  │
+I (00:02:04.591) : └───────────────────┴──────────┴─────────────┴─────────┴──────────┴───────────┴────────────┴───────┘
 ```
