@@ -16,6 +16,14 @@
 #include "task.hpp"
 #include "logger.hpp"
 
+#define MUSIC_PLAYER_STACK_SIZE (4 * 1024)
+#define MUSIC_PLAYER_PRIORITY 21
+#define MUSIC_PLAYER_CORE_ID 0
+
+#define PLAYER_TASK_STACK_SIZE (4 * 1024)
+#define PLAYER_TASK_PRIORITY 21           
+#define PLAYER_TASK_CORE_ID 0
+
 namespace audio
 {
 
@@ -103,9 +111,9 @@ namespace audio
               },
               .task_config = {
                   .name = "music_ctrl",
-                  .stack_size_bytes = 8 * 1024,
-                  .priority = 15,
-                  .core_id = 0,
+                  .stack_size_bytes = PLAYER_TASK_STACK_SIZE,
+                  .priority = PLAYER_TASK_PRIORITY,
+                  .core_id = PLAYER_TASK_CORE_ID,
               }});
 
       control_task_->start();
@@ -213,7 +221,9 @@ namespace audio
       // ----- GMF TASK (MANDATORY) -----
       esp_gmf_task_cfg_t cfg = DEFAULT_ESP_GMF_TASK_CONFIG();
       cfg.name = "MUSIC_PLAYER";
-      cfg.thread.stack = 4096;
+      cfg.thread.stack = MUSIC_PLAYER_STACK_SIZE;
+      cfg.thread.core = MUSIC_PLAYER_CORE_ID;
+      cfg.thread.prio = MUSIC_PLAYER_PRIORITY;
 
       if (esp_gmf_task_init(&cfg, &gmf_task_) != ESP_OK)
         return false;
