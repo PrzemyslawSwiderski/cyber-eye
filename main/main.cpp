@@ -41,26 +41,28 @@ extern "C" void app_main()
   // Initialize WiFi first
   wifi::start_wifi_task();
 
-  while (!wifi::is_connected())
-  {
-    // waiting for the WIFI connection
-    std::this_thread::sleep_for(50ms);
-  }
+  // while (!wifi::is_connected())
+  // {
+  //   // waiting for the WIFI connection
+  //   std::this_thread::sleep_for(50ms);
+  // }
 
-  auto ip = wifi::get_ip();
+  // std::this_thread::sleep_for(2s);
 
-  auto signal_str = wifi::get_signal_strength();
-  logger.info("WiFi signal strength: {} dBm (-30 -> excellent, -90 -> weak)", signal_str);
+  // auto ip = wifi::get_ip();
 
-  // Start FTP server
-  ftp::start_server_task(ip);
+  // auto signal_str = wifi::get_signal_strength();
+  // logger.info("WiFi signal strength: {} dBm (-30 -> excellent, -90 -> weak)", signal_str);
 
-  ctrl::HttpController::Config http_config;
-  http_config.port = 8080;
-  http_config.bind_address = ip;
+  // // Start FTP server
+  // ftp::start_server_task(ip);
 
-  g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
-  g_http_controller->start_task();
+  // ctrl::HttpController::Config http_config;
+  // http_config.port = 8080;
+  // http_config.bind_address = ip;
+
+  // g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
+  // g_http_controller->start_task();
 
   while (1)
   {
