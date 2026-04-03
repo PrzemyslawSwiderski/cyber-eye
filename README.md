@@ -65,35 +65,41 @@ javascript.options.mem.gc_compacting=false
 dom.ipc.processCount=1
 ```
 
-### Proper 34 FPS `tasks` output
+### Proper 43 FPS `tasks` output for 
 
 ```
-I (00:02:04.204) : ┌───────────────────┬──────────┬─────────────┬─────────┬──────────┬───────────┬────────────┬───────┐
-I (00:02:04.227) : │ Task              │ Core ID  │ Run Time    │ CPU     │ Priority │ Stack HWM │ State      │ Stack │
-I (00:02:04.239) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
-I (00:02:04.272) : │ IDLE0             │ 0        │ 965208      │  48.60% │ 0        │ 1240      │ Ready      │ Intr  │
-I (00:02:04.284) : │ main              │ 0        │ 256         │   0.01% │ 1        │ 588       │ Blocked    │ Intr  │
-I (00:02:04.296) : │ sys_evt           │ 0        │ 0           │   0.00% │ 20       │ 516       │ Blocked    │ Intr  │
-I (00:02:04.308) : │ esp_timer         │ 0        │ 0           │   0.00% │ 22       │ 3792      │ Suspended  │ Intr  │
-I (00:02:04.319) : │ httpd             │ 0        │ 0           │   0.00% │ 5        │ 37796     │ Blocked    │ Intr  │
-I (00:02:04.331) : │ ipc0              │ 0        │ 0           │   0.00% │ 24       │ 728       │ Suspended  │ Intr  │
-I (00:02:04.342) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
-I (00:02:04.376) : │ IDLE1             │ 1        │ 913529      │  46.00% │ 0        │ 1232      │ Ready      │ Intr  │
-I (00:02:04.387) : │ venc_0            │ 1        │ 48185       │   2.43% │ 20       │ 30188     │ Blocked    │ Extr  │
-I (00:02:04.399) : │ tiT               │ 1        │ 14394       │   0.72% │ 19       │ 6752      │ Blocked    │ Intr  │
-I (00:02:04.410) : │ stream_task       │ 1        │ 7687        │   0.39% │ 17       │ 29876     │ Blocked    │ Intr  │
-I (00:02:04.432) : │ ipc1              │ 1        │ 0           │   0.00% │ 24       │ 720       │ Suspended  │ Intr  │
-I (00:02:04.444) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
-I (00:02:04.467) : │ sdio_read         │ 7fffffff │ 21273       │   1.07% │ 23       │ 3200      │ Blocked    │ Intr  │
-I (00:02:04.478) : │ sdio_write        │ 7fffffff │ 7638        │   0.38% │ 23       │ 4336      │ Blocked    │ Intr  │
-I (00:02:04.500) : │ console_repl      │ 7fffffff │ 5774        │   0.29% │ 2        │ 2200      │ Running    │ Intr  │
-I (00:02:04.512) : │ sdio_process_rx   │ 7fffffff │ 2693        │   0.14% │ 23       │ 3032      │ Blocked    │ Intr  │
-I (00:02:04.524) : │ sdio_rx_buf       │ 7fffffff │ 1452        │   0.07% │ 23       │ 1208      │ Blocked    │ Intr  │
-I (00:02:04.535) : │ rpc_rx            │ 7fffffff │ 0           │   0.00% │ 23       │ 2440      │ Blocked    │ Intr  │
-I (00:02:04.547) : │ rpc_tx            │ 7fffffff │ 0           │   0.00% │ 23       │ 3304      │ Blocked    │ Intr  │
-I (00:02:04.558) : │ FtpServer::acce   │ 7fffffff │ 0           │   0.00% │ 5        │ 3300      │ Blocked    │ Intr  │
-I (00:02:04.570) : │ Tmr Svc           │ 7fffffff │ 0           │   0.00% │ 1        │ 1720      │ Blocked    │ Intr  │
-I (00:02:04.591) : └───────────────────┴──────────┴─────────────┴─────────┴──────────┴───────────┴────────────┴───────┘
+I (00:00:07.631) VID_PIPE_NEGO: Success to negotiate 0 format:o_uyy_e_vyy 1280x960 45fps
+cyber-eye>  ta[VideoStream/I][132.574]: Streaming FPS: 43.2, total frames=266, dropped=0
+cyber-eye>  tasks
+[VideoStream/I][135.584]: Streaming FPS: 43.2, total frames=396, dropped=0
+I (00:02:15.133) : ┌───────────────────┬──────────┬─────────────┬─────────┬──────────┬───────────┬────────────┬───────┐
+I (00:02:15.156) : │ Task              │ Core ID  │ Run Time    │ CPU     │ Priority │ Stack HWM │ State      │ Stack │
+I (00:02:15.168) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
+I (00:02:15.205) : │ IDLE0             │ 0        │ 679611      │  34.14% │ 0        │ 1224      │ Ready      │ Intr  │
+I (00:02:15.216) : │ MUSIC_PLAYER      │ 0        │ 276202      │  13.87% │ 21       │ 1640      │ Blocked    │ Intr  │
+I (00:02:15.235) : │ main              │ 0        │ 259         │   0.01% │ 1        │ 652       │ Blocked    │ Intr  │
+I (00:02:15.247) : │ music_ctrl        │ 0        │ 86          │   0.00% │ 21       │ 1988      │ Blocked    │ Intr  │
+I (00:02:15.259) : │ ipc0              │ 0        │ 0           │   0.00% │ 24       │ 596       │ Suspended  │ Intr  │
+I (00:02:15.271) : │ sys_evt           │ 0        │ 0           │   0.00% │ 20       │ 680       │ Blocked    │ Intr  │
+I (00:02:15.284) : │ esp_timer         │ 0        │ 0           │   0.00% │ 22       │ 3792      │ Suspended  │ Intr  │
+I (00:02:15.295) : │ httpd             │ 0        │ 0           │   0.00% │ 5        │ 37584     │ Blocked    │ Intr  │
+I (00:02:15.310) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
+I (00:02:15.350) : │ IDLE1             │ 1        │ 915125      │  45.97% │ 0        │ 1216      │ Ready      │ Intr  │
+I (00:02:15.364) : │ venc_0            │ 1        │ 39864       │   2.00% │ 14       │ 13804     │ Blocked    │ Extr  │
+I (00:02:15.376) : │ tiT               │ 1        │ 20734       │   1.04% │ 15       │ 6752      │ Ready      │ Intr  │
+I (00:02:15.390) : │ stream_task       │ 1        │ 9958        │   0.50% │ 12       │ 5320      │ Blocked    │ Intr  │
+I (00:02:15.402) : │ ipc1              │ 1        │ 0           │   0.00% │ 24       │ 720       │ Suspended  │ Intr  │
+I (00:02:15.415) : ├───────────────────┼──────────┼─────────────┼─────────┼──────────┼───────────┼────────────┼───────┤
+I (00:02:15.445) : │ sdio_read         │ 7fffffff │ 31246       │   1.57% │ 23       │ 3200      │ Blocked    │ Intr  │
+I (00:02:15.470) : │ sdio_write        │ 7fffffff │ 11345       │   0.57% │ 23       │ 4336      │ Blocked    │ Intr  │
+I (00:02:15.481) : │ sdio_process_rx   │ 7fffffff │ 4071        │   0.20% │ 23       │ 3032      │ Blocked    │ Intr  │
+I (00:02:15.494) : │ console_repl      │ 7fffffff │ 2694        │   0.14% │ 2        │ 2204      │ Running    │ Intr  │
+I (00:02:15.505) : │ sdio_rx_buf       │ 7fffffff │ 2139        │   0.11% │ 23       │ 1212      │ Blocked    │ Intr  │
+I (00:02:15.519) : │ rpc_rx            │ 7fffffff │ 0           │   0.00% │ 23       │ 2460      │ Blocked    │ Intr  │
+I (00:02:15.530) : │ rpc_tx            │ 7fffffff │ 0           │   0.00% │ 23       │ 3288      │ Blocked    │ Intr  │
+I (00:02:15.544) : │ FtpServer::acce   │ 7fffffff │ 0           │   0.00% │ 5        │ 3304      │ Blocked    │ Intr  │
+I (00:02:15.556) : │ Tmr Svc           │ 7fffffff │ 0           │   0.00% │ 1        │ 1720      │ Blocked    │ Intr  │
+I (00:02:15.576) : └───────────────────┴──────────┴─────────────┴─────────┴──────────┴───────────┴────────────┴───────┘
 ```
 
 ### OV5647 camera config location -> `managed_components/espressif__esp_cam_sensor/sensors/ov5647/cfg/ov5647_default.json`

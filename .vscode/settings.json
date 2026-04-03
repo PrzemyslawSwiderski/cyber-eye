@@ -32,6 +32,6 @@
   "idf.flashType": "UART",
   "idf.port": "/dev/ttyACM0",
   "idf.toolsPath": "/home/pswidersk/.espressif",
-  "idf.currentSetup": "/home/pswidersk/.espressif/release-v5.5/esp-idf",
+  "idf.currentSetup": "/home/pswidersk/.espressif/v5.5.3/esp-idf",
   "C_Cpp.errorSquiggles": "disabled"
 }

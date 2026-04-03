@@ -1,5 +1,3 @@
-// #include "bsp/esp-bsp.h"
-
 #include <chrono>
 #include "logger.hpp"
 
@@ -30,6 +28,11 @@ extern "C" void app_main()
 {
   espp::Logger logger({.tag = "MAIN", .level = espp::Logger::Verbosity::DEBUG});
   logger.info("Bootup");
+
+  // Initialize network interface
+  ESP_ERROR_CHECK(esp_netif_init());
+  // Create default event loop
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
 
   esp_board_manager_init();
   esp_gmf_app_cli_init("cyber-eye> ", NULL);
