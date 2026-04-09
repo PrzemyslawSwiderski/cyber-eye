@@ -103,3 +103,6 @@ I (00:02:15.576) : └───────────────────�
 ```
 
 ### OV5647 camera config location -> `managed_components/espressif__esp_cam_sensor/sensors/ov5647/cfg/ov5647_default.json`
+
+
+### SLAVE FIRMWARE UPDATE https://github.com/espressif/esp-hosted-mcu/blob/main/examples/host_performs_slave_ota/README.md
