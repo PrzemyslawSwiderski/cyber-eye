@@ -62,9 +62,6 @@ extern "C" void app_main()
 
   auto ip = wifi::get_ip();
 
-  auto signal_str = wifi::get_signal_strength();
-  logger.info("WiFi signal strength: {} dBm (-30 -> excellent, -90 -> weak)", signal_str);
-
   // Start FTP server
   ftp::start_server_task(ip);
 
@@ -77,8 +74,8 @@ extern "C" void app_main()
 
   // wifi::StaCredentials creds({.ssid = CONFIG_ESP_WIFI_SSID,
   //                             .password = CONFIG_ESP_WIFI_PASSWORD});
-  // wifi::set_mode(wifi::Mode::STA, creds);
-  
+  // wifi::set_mode(wifi::Mode::STA, creds); 
+
   // wifi::set_mode(wifi::Mode::AP, {});
 
   while (1)
