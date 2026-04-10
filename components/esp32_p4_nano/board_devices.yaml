@@ -84,3 +84,4 @@ devices:
     peripherals:
       - name: "i2c_master"
         frequency: 100000
+      - name: ldo_mipi

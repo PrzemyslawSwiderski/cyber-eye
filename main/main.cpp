@@ -1,6 +1,7 @@
 #include <chrono>
 #include "logger.hpp"
 
+#include "secrets.hpp"
 #include "ftp_mod.hpp"
 #include "wifi_mod.hpp"
 #include "music_player.hpp"
@@ -29,6 +30,15 @@ extern "C" void app_main()
   espp::Logger logger({.tag = "MAIN", .level = espp::Logger::Verbosity::DEBUG});
   logger.info("Bootup");
 
+  // NVS must come first — wifi::begin() reads from it
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(ret);
+
   // Initialize network interface
   ESP_ERROR_CHECK(esp_netif_init());
   // Create default event loop
@@ -42,7 +52,7 @@ extern "C" void app_main()
   player->initialize();
 
   // Initialize WiFi first
-  wifi::start_wifi_task();
+  wifi::begin();
 
   while (!wifi::is_connected())
   {
@@ -64,6 +74,12 @@ extern "C" void app_main()
 
   g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
   g_http_controller->start_task();
+
+  // wifi::StaCredentials creds({.ssid = CONFIG_ESP_WIFI_SSID,
+  //                             .password = CONFIG_ESP_WIFI_PASSWORD});
+  // wifi::set_mode(wifi::Mode::STA, creds);
+  
+  // wifi::set_mode(wifi::Mode::AP, {});
 
   while (1)
   {

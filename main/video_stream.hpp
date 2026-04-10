@@ -60,6 +60,7 @@ namespace ctrl
       }
 
       esp_capture_sink_cfg_t sink_cfg = {
+          .audio_info = {},
           .video_info = {
               .format_id = ESP_CAPTURE_FMT_ID_H264,
               .width = CONFIG_VIDEO_STREAM_WIDTH,
@@ -286,6 +287,7 @@ namespace ctrl
 
       esp_capture_cfg_t capture_cfg = {
           .sync_mode = ESP_CAPTURE_SYNC_MODE_SYSTEM,
+          .audio_src = nullptr,
           .video_src = capture_sys->vid_src,
       };
 

@@ -13,6 +13,20 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 1.0.36
+  espp/cli:
+    component_hash: da7092b2ffcdf2620aa4fa784eb81eae8b4f518f23e86ecda7e929def4b85e96
+    dependencies:
+    - name: espp/logger
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.36
   espp/file_system:
     component_hash: ae9634480bb390059dcc37130643746ec16c81660a2586f55e5658e9b1cf4e00
     dependencies:
@@ -42,7 +56,7 @@ dependencies:
       type: service
     version: 1.0.36
   espp/ftp:
-    component_hash: fab7874fbd7075a7e09b8ead98dd4d60eb9e50f195eaa352295d3baa56b18c94
+    component_hash: df7f6f33d48e170c9678542dc30872c077217bc1fc83052fa45bb92aa419ecfa
     dependencies:
     - name: espp/base_component
       registry_url: https://components.espressif.com
@@ -66,7 +80,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.0.35
+    version: 1.0.36
   espp/logger:
     component_hash: afd6709bfc54ba3f88387a1070ffe470253451c1e761a11228019e98ef90a0d9
     dependencies:
@@ -203,7 +217,7 @@ dependencies:
       type: service
     version: 1.2.1
   espressif/esp_board_manager:
-    component_hash: 8d0497007cc3e4baaedd5dc8cf6cee3f08c1f0f8dbb11736fd5cf1e6096e6267
+    component_hash: bb5e142a30aeab6234ea6420eb41ce7342c7c8858eb66f305694b142fc00eaa1
     dependencies:
     - matches:
       - if: $CONFIG{ESP_BOARD_DEV_BUTTON_SUPPORT} == True
@@ -238,7 +252,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 0.5.6
+    version: 0.5.7
   espressif/esp_cam_sensor:
     component_hash: 902c305b77f7c42b60fff5a084e397694f8a3fd6e6b72299996a7c856666e983
     dependencies:
@@ -478,7 +492,7 @@ dependencies:
       type: service
     version: 0.5.3
   espressif/esp_wifi_remote:
-    component_hash: 4bd046a7474454fcac858bd5e689a0e401dda8df21a5abba175d4ebd1205254c
+    component_hash: 1e71e4a302ac61a67f854df0e3e2f0818ba7d85c30f0cada628270ee5ff17603
     dependencies:
     - name: espressif/esp_hosted
       registry_url: https://components.espressif.com
@@ -496,7 +510,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.4.2
+    version: 1.5.0
   espressif/gmf_ai_audio:
     component_hash: 6a247b2169a25af9b1b16d2122cef9da889cafeeebbecd3c44b66f14f2ab3fb1
     dependencies:
@@ -693,6 +707,7 @@ dependencies:
       type: service
     version: 1.20.1
 direct_dependencies:
+- espp/cli
 - espp/ftp
 - espressif/cjson
 - espressif/esp_board_manager
@@ -702,6 +717,6 @@ direct_dependencies:
 - espressif/gmf_app_utils
 - espressif/gmf_loader
 - idf
-manifest_hash: b40f8aef10b549061b3a4e0e4afe8fda59f18802be7488d6b95419fb7dd03c3f
+manifest_hash: 76212843ed7f920d5ae0c8db87db249cf7ed0d955ea266b5e1b545e053566dc3
 target: esp32p4
 version: 2.0.0
