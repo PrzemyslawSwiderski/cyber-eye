@@ -333,12 +333,15 @@ namespace ctrl
     {
       log_request(req, "/api/system/reset");
 
+      send_json_message(req, "status", "restarting");
+
+      // Give the HTTP stack time to flush the response before pulling the rug
+      vTaskDelay(pdMS_TO_TICKS(200));
       esp_restart();
 
-      send_json_message(req, "status", "restarting");
       return ESP_OK;
     }
-
+    
     static esp_err_t handle_signal_info(httpd_req_t *req)
     {
       log_request(req, "/api/wifi/info");
@@ -388,7 +391,7 @@ namespace ctrl
       if (!get_query_param(req, "ssid", ssid, sizeof(ssid)))
       {
         instance_->logger_.warn("STA request missing 'ssid' parameter");
-        httpd_resp_seUEST, "Missing 'ssind_err(req, HTTPD_400_BAD_REQd' query parameter");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing 'ssid' query parameter");
         return ESP_FAIL;
       }
 
@@ -408,7 +411,7 @@ namespace ctrl
       send_json_message(req, "status", "sta_connected");
       return ESP_OK;
     }
-    };
+  };
 
   HttpController *HttpController::instance_ = nullptr;
 }
