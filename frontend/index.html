@@ -10,15 +10,43 @@
 </head>
 
 <body class="bg-black d-flex flex-column min-vh-100">
-
   <!-- Top bar -->
-  <div id="topBar" class="d-flex align-items-center gap-2 px-3 py-2 border-bottom border-secondary">
-    <label for="inputBaseUrl" class="text-secondary text-nowrap small mb-0">Base URL</label>
-    <input id="inputBaseUrl" type="text" value="http://192.168.1.17:8080" spellcheck="false"
-      class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:280px;" />
-    <button id="btnConnect" class="btn btn-sm btn-success ms-1">Connect</button>
-    <button id="btnDisconnect" class="btn btn-sm btn-danger" disabled>Disconnect</button>
+  <div id="topBar" class="d-flex flex-column px-3 py-2 border-bottom border-secondary gap-2">
+
+    <!-- Row 1: Connection -->
+    <div class="d-flex align-items-center gap-2">
+      <label for="inputBaseUrl" class="text-secondary text-nowrap small mb-0">Base URL</label>
+      <input id="inputBaseUrl" type="text" value="http://192.168.1.17:8080" spellcheck="false"
+        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:280px;" />
+      <button id="btnConnect" class="btn btn-sm btn-success ms-1">Connect</button>
+      <button id="btnDisconnect" class="btn btn-sm btn-danger" disabled>Disconnect</button>
+    </div>
+
+    <!-- Row 2: WiFi mode -->
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-secondary text-nowrap small">WiFi mode</span>
+      <button id="btnApMode" class="btn btn-sm btn-outline-warning">📡 Switch to AP</button>
+      <label for="inputSsid" class="text-secondary text-nowrap small mb-0">SSID</label>
+      <input id="inputSsid" type="text" placeholder="Network name" spellcheck="false"
+        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:180px;" />
+      <label for="inputPassword" class="text-secondary text-nowrap small mb-0">Password</label>
+      <input id="inputPassword" type="password" placeholder="••••••••" spellcheck="false"
+        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:160px;" />
+      <button id="btnStaConnect" class="btn btn-sm btn-outline-info">🔗 Connect STA</button>
+      <span id="wifiStatus" class="small ms-2"></span>
+    </div>
+
+    <!-- Row 3: System -->
+    <div class="d-flex align-items-start gap-2">
+      <span class="text-secondary text-nowrap small mt-1">System</span>
+      <button id="btnFetchTasks" class="btn btn-sm btn-outline-secondary">📋 Fetch Tasks</button>
+      <textarea id="tasksLog" readonly spellcheck="false" placeholder="Task list will appear here…"
+      class="form-control form-control-sm bg-dark text-light border-secondary font-monospace small"
+      style="min-width:340px; height:80px; resize:vertical;"></textarea>
+      <button id="btnReset" class="btn btn-sm btn-outline-danger">⚠ Reset ESP</button>
+    </div>
   </div>
+
   <button id="topBarToggle" title="Toggle toolbar">▲</button>
 
   <!-- Viewport: overlay + canvas stacked via CSS, not DOM nesting -->
@@ -54,6 +82,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   <script src="main.js"></script>
+  <script src="wifi_change.js"></script>
+  <script src="system.js"></script>
 </body>
 
 </html>
