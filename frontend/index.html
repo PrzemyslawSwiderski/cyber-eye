@@ -16,6 +16,7 @@
     <!-- Row 1: Connection -->
     <div class="d-flex align-items-center gap-2">
       <label for="inputBaseUrl" class="text-secondary text-nowrap small mb-0">Base URL</label>
+      <button id="btnApUrl" class="btn btn-sm btn-outline-secondary">AP</button>
       <input id="inputBaseUrl" type="text" value="http://192.168.1.17:8080" spellcheck="false"
         class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:280px;" />
       <button id="btnConnect" class="btn btn-sm btn-success ms-1">Connect</button>
@@ -41,10 +42,30 @@
       <span class="text-secondary text-nowrap small mt-1">System</span>
       <button id="btnFetchTasks" class="btn btn-sm btn-outline-secondary">📋 Fetch Tasks</button>
       <textarea id="tasksLog" readonly spellcheck="false" placeholder="Task list will appear here…"
-      class="form-control form-control-sm bg-dark text-light border-secondary font-monospace small"
-      style="min-width:340px; height:80px; resize:vertical;"></textarea>
+        class="form-control form-control-sm bg-dark text-light border-secondary font-monospace small"
+        style="min-width:340px; height:80px; resize:vertical;"></textarea>
       <button id="btnReset" class="btn btn-sm btn-outline-danger">⚠ Reset ESP</button>
     </div>
+
+    <!-- Row 4: Music Player -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="text-secondary text-nowrap small">Music</span>
+
+      <input id="inputMusicFile" type="text" value="/sdcard/test.mp3" placeholder="/sdcard/test.mp3" spellcheck="false"
+        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:200px;" />
+      <button id="btnMusicPlay" class="btn btn-sm btn-outline-success">▶ Play</button>
+      <button id="btnMusicStop" class="btn btn-sm btn-outline-danger">■ Stop</button>
+
+      <div class="vr bg-secondary mx-1" style="opacity:.4;"></div>
+
+      <label for="inputVolume" class="text-secondary text-nowrap small mb-0">Vol</label>
+      <input id="inputVolume" type="number" min="0" max="100" value="50"
+        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:70px;" />
+      <button id="btnVolumeSet" class="btn btn-sm btn-outline-secondary">Set</button>
+
+      <span id="musicStatus" class="small text-secondary ms-1"></span>
+    </div>
+
   </div>
 
   <button id="topBarToggle" title="Toggle toolbar">▲</button>
@@ -81,9 +102,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
-  <script src="main.js"></script>
+  <script src="signal_info.js"></script>
+  <script src="video_settings.js"></script>
   <script src="wifi_change.js"></script>
   <script src="system.js"></script>
+  <script src="music_player.js"></script>
+  <script src="main.js"></script>
 </body>
 
 </html>
