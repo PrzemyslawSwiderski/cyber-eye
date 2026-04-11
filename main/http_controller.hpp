@@ -120,7 +120,11 @@ namespace ctrl
       register_uri("/api/system/tasks", HTTP_GET, handle_system_tasks);
       register_uri("/api/system/info", HTTP_GET, handle_system_info);
       register_uri("/api/system/reset", HTTP_GET, handle_system_reset);
-      register_uri("/api/signal/info", HTTP_GET, handle_signal_info);
+
+      // WiFi endpoints
+      register_uri("/api/wifi/info", HTTP_GET, handle_signal_info);
+      register_uri("/api/wifi/ap", HTTP_GET, handle_access_point_mode);
+      register_uri("/api/wifi/sta", HTTP_GET, handle_sta_mode);
 
       // Video stream endpoint
       register_uri("/stream.h264", HTTP_GET, VideoStream::handle_stream);
@@ -337,7 +341,7 @@ namespace ctrl
 
     static esp_err_t handle_signal_info(httpd_req_t *req)
     {
-      log_request(req, "/api/signal/info");
+      log_request(req, "/api/wifi/info");
 
       auto start = esp_timer_get_time(); // microseconds
 
@@ -356,7 +360,55 @@ namespace ctrl
 
       return ESP_OK;
     }
-  };
+
+    static esp_err_t handle_access_point_mode(httpd_req_t *req)
+    {
+      log_request(req, "/api/wifi/ap");
+
+      instance_->logger_.info("Switching to AP mode");
+      bool ok = wifi::set_mode(wifi::Mode::AP);
+
+      if (!ok)
+      {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to start AP mode");
+        return ESP_FAIL;
+      }
+
+      send_json_message(req, "status", "ap_started");
+      return ESP_OK;
+    }
+
+    static esp_err_t handle_sta_mode(httpd_req_t *req)
+    {
+      log_request(req, "/api/wifi/sta");
+
+      char ssid[32] = {0};
+      char password[64] = {0};
+
+      if (!get_query_param(req, "ssid", ssid, sizeof(ssid)))
+      {
+        instance_->logger_.warn("STA request missing 'ssid' parameter");
+        httpd_resp_seUEST, "Missing 'ssind_err(req, HTTPD_400_BAD_REQd' query parameter");
+        return ESP_FAIL;
+      }
+
+      // Password is optional (open networks)
+      get_query_param(req, "password", password, sizeof(password));
+
+      instance_->logger_.info("Switching to STA mode, SSID: {}", ssid);
+      bool ok = wifi::set_mode(wifi::Mode::STA, {.ssid = ssid, .password = password});
+
+      if (!ok)
+      {
+        instance_->logger_.warn("Failed to connect to SSID: {}", ssid);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to connect in STA mode");
+        return ESP_FAIL;
+      }
+
+      send_json_message(req, "status", "sta_connected");
+      return ESP_OK;
+    }
+    };
 
   HttpController *HttpController::instance_ = nullptr;
 }

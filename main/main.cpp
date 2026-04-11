@@ -14,7 +14,6 @@
 #include "esp_gmf_app_sys.h"
 #include "esp_littlefs.h"
 #include "esp_netif.h"
-#include "nvs_flash.h"
 
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
@@ -29,15 +28,6 @@ extern "C" void app_main()
 {
   espp::Logger logger({.tag = "MAIN", .level = espp::Logger::Verbosity::DEBUG});
   logger.info("Bootup");
-
-  // NVS must come first — wifi::begin() reads from it
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-  {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
 
   // Initialize network interface
   ESP_ERROR_CHECK(esp_netif_init());
@@ -74,7 +64,7 @@ extern "C" void app_main()
 
   // wifi::StaCredentials creds({.ssid = CONFIG_ESP_WIFI_SSID,
   //                             .password = CONFIG_ESP_WIFI_PASSWORD});
-  // wifi::set_mode(wifi::Mode::STA, creds); 
+  // wifi::set_mode(wifi::Mode::STA, creds);
 
   // wifi::set_mode(wifi::Mode::AP, {});
 

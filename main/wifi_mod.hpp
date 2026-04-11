@@ -44,11 +44,12 @@ namespace wifi
   inline esp_event_handler_instance_t wifi_handler = nullptr;
   inline esp_event_handler_instance_t ip_handler = nullptr;
   inline std::atomic<bool> connected{false};
+  inline std::atomic<bool> disconnect_expected{false};
   inline int retry_num = 0;
 
   // ── utilities ──────────────────────────────────────────────────────────────
   inline bool set_mode(Mode mode, StaCredentials credentials = {});
-  
+
   inline void set_str(uint8_t *dst, size_t sz, std::string_view src)
   {
     snprintf(reinterpret_cast<char *>(dst), sz, "%.*s",
@@ -102,6 +103,12 @@ namespace wifi
   {
     connected = false;
     logger.warn("WiFi disconnected");
+
+    if (disconnect_expected)
+    {
+      disconnect_expected = false;
+      return;
+    }
 
     if (retry_num < MAX_RETRY)
     {
@@ -209,10 +216,11 @@ namespace wifi
 
   inline void teardown()
   {
-    retry_num = MAX_RETRY; // prevent retry handler from reconnecting during teardown
-
     if (get_current_mode() == Mode::STA)
+    {
+      disconnect_expected = true;
       ESP_ERROR_CHECK(esp_wifi_disconnect());
+    }
 
     ESP_ERROR_CHECK(esp_wifi_stop());
     ESP_ERROR_CHECK(esp_wifi_deinit());
@@ -232,7 +240,6 @@ namespace wifi
     vEventGroupDelete(event_group);
     event_group = nullptr;
     connected = false;
-    retry_num = 0;
   }
 
   inline bool wait_for_connection()

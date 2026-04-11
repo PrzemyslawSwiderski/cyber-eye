@@ -17,7 +17,7 @@ function getBaseUrl() {
 }
 
 function getStreamUrl() { return `${getBaseUrl()}/stream.h264`; }
-function getSignalUrl() { return `${getBaseUrl()}/api/signal/info`; }
+function getSignalUrl() { return `${getBaseUrl()}/api/wifi/info`; }
 
 // Keep canvas pixel dimensions matched to its container size
 const canvasWrap = document.getElementById('canvasWrap');

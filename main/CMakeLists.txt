@@ -1,4 +1,4 @@
-file(GLOB_RECURSE ALL_SRCS "*.c" "*.cpp")
+file(GLOB_RECURSE ALL_SRCS "main.cpp" "*.c" "*.cpp")
 
 idf_component_register(
     SRCS ${ALL_SRCS}

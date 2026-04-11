@@ -7,3 +7,4 @@ managed_components
 build
 secrets.h
 secrets.hpp
+http/wifi.http
