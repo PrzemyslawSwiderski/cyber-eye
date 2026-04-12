@@ -45,7 +45,8 @@ function connect() {
   // Start stream
   streamHandler.start();
 
-  // scheduleSignalPoll(1000); // defined in signal_info.js
+  const signalPollingDelay = 1000; // 1 second
+  scheduleSignalPoll(signalPollingDelay);
 }
 
 function disconnect() {
