@@ -26,7 +26,7 @@ btnFetchTasks.addEventListener('click', async () => {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
 
-    const windowMs = json.window_ms || 6000;
+    const windowMs = json.window_ms;
     const header = `Tasks: ${json.task_count} (measured over ${windowMs}ms)\n` +
       `${'─'.repeat(77)}\n` +
       `${'Name'.padEnd(17)} ${'State'.padEnd(11)} ${'Pri'.padEnd(4)} ${'Core'.padEnd(5)} ${'Base'.padEnd(5)} ${'Free'.padEnd(8)} ${'Pressure'.padEnd(10)} ${'CPU%'.padEnd(6)}\n` +
