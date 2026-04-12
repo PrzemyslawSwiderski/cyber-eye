@@ -43,7 +43,7 @@
       <button id="btnFetchTasks" class="btn btn-sm btn-outline-secondary">📋 Fetch Tasks</button>
       <textarea id="tasksLog" readonly spellcheck="false" placeholder="Task list will appear here…"
         class="form-control form-control-sm bg-dark text-light border-secondary font-monospace small"
-        style="min-width:340px; height:80px; resize:vertical;"></textarea>
+        style="width:670px; height:200px; resize:vertical;"></textarea>
       <button id="btnReset" class="btn btn-sm btn-outline-danger">⚠ Reset ESP</button>
     </div>
 
@@ -102,12 +102,14 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
-  <script src="signal_info.js"></script>
-  <script src="video_settings.js"></script>
-  <script src="wifi_change.js"></script>
-  <script src="system.js"></script>
-  <script src="music_player.js"></script>
-  <script src="main.js"></script>
+  <script type="module" src="signal_info.js"></script>
+  <script type="module" src="video_settings.js"></script>
+  <script type="module" src="wifi_change.js"></script>
+  <script type="module" src="system.js"></script>
+  <script type="module" src="music_player.js"></script>
+  <script type="module" src="config.js"></script>
+  <script type="module" src="video_stream.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 
 </html>

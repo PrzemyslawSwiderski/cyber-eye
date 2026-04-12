@@ -107,6 +107,23 @@ namespace ctrl
       instance_->logger_.info("Client connected");
       int sock = httpd_req_to_sockfd(req);
 
+      // int opt = 1;
+      // setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
+
+      // Set socket timeout
+      // struct timeval tv;
+      // tv.tv_sec = 0;
+      // tv.tv_usec = 100000; // 0.1 second timeout
+      // setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+      // Increase send buffer significantly
+      // int sndbuf = 65536; // 64KB
+      // setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+
+      // Set keepalive
+      // int keepalive = 1;
+      // setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+
       // Send HTTP headers directly on the raw socket before handing it off
       const char *headers =
           "HTTP/1.1 200 OK\r\n"
@@ -161,7 +178,7 @@ namespace ctrl
 
     static void stream_task(void *arg)
     {
-      instance_->logger_.info("Stream task");
+      instance_->logger_.info("Stream task started");
       auto *ctx = static_cast<StreamTaskCtx *>(arg);
 
       int frame_count = 0;
@@ -178,7 +195,6 @@ namespace ctrl
         if (err != ESP_CAPTURE_ERR_OK)
         {
           dropped_count++;
-          esp_capture_sink_release_frame(ctx->sink, &frame);
           continue;
         }
 
@@ -194,8 +210,7 @@ namespace ctrl
             send(ctx->sock, "\r\n", 2, 0) < 0;
 
         esp_capture_sink_release_frame(ctx->sink, &frame);
-        vTaskDelay(pdMS_TO_TICKS(1)); // yield after every frame — keeps IDLE scheduled
-
+        
         if (disconnected)
         {
           instance_->logger_.info("Client disconnected, frames={}, dropped={}", frame_count, dropped_count);
@@ -215,6 +230,8 @@ namespace ctrl
           fps_frame_count = 0;
           fps_last_time = now;
         }
+        // vTaskDelay(pdMS_TO_TICKS(16)); // yeilds to other tasks and limits maximum FPS to ~62 FPS even if camera produces more
+        vTaskDelay(pdMS_TO_TICKS(27)); // yeilds to other tasks and limits maximum FPS to ~37 FPS even if camera produces more
       }
 
       // Send chunked EOF
@@ -222,6 +239,8 @@ namespace ctrl
 
       close(ctx->sock);
       delete ctx;
+
+      instance_->logger_.info("Stream task ended");
       vTaskDelete(nullptr);
     }
 
@@ -230,40 +249,6 @@ namespace ctrl
       schedule_cfg->core_id = VENC_TASK_CORE_ID;
       schedule_cfg->stack_size = VENC_TASK_STACK_SIZE;
       schedule_cfg->priority = VENC_TASK_PRIORITY;
-    }
-
-    static void set_camera_controls(const char *dev_name)
-    {
-      int fd = open(dev_name, O_RDWR);
-      if (fd < 0)
-      {
-        return;
-      }
-
-      // Helper lambda/struct to set a control
-      auto set_ctrl = [fd](uint32_t id, int32_t value)
-      {
-        struct v4l2_control ctrl = {
-            .id = id,
-            .value = value,
-        };
-        ioctl(fd, VIDIOC_S_CTRL, &ctrl);
-      };
-
-      // Increase brightness (typical range: -64 to 64, default 0)
-      set_ctrl(V4L2_CID_BRIGHTNESS, 60);
-
-      // Increase exposure (if manual mode is supported)
-      set_ctrl(V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_MANUAL);
-      set_ctrl(V4L2_CID_EXPOSURE_ABSOLUTE, 500); // value depends on sensor
-
-      // Increase gain (typical range: 0–255)
-      set_ctrl(V4L2_CID_GAIN, 80);
-
-      // Or increase contrast
-      set_ctrl(V4L2_CID_CONTRAST, 30);
-
-      close(fd);
     }
 
     static esp_capture_video_src_if_t *create_video_source()
@@ -283,7 +268,6 @@ namespace ctrl
         instance_->logger_.error("Fail to create video source");
         return -1;
       }
-      set_camera_controls(CAMERA_DEVICE_NAME);
 
       esp_capture_cfg_t capture_cfg = {
           .sync_mode = ESP_CAPTURE_SYNC_MODE_SYSTEM,

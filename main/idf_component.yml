@@ -11,5 +11,4 @@ dependencies:
   # espressif/esp_codec_dev: 1.4.0
   # espressif/esp_audio_codec: 2.4.1
   espressif/esp_capture: 0.8.1
-  espp/cli: 1.0.36
   espp/ftp: 1.0.36

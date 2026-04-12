@@ -7,9 +7,10 @@
 #include "music_player.hpp"
 #include "http_controller.hpp"
 #include "file_system.hpp"
+#include "tasks_mod.hpp"
+#include "video_recorder.hpp"
 
 #include "esp_board_manager.h"
-#include "esp_gmf_app_cli.h"
 #include "esp_gmf_app_setup_peripheral.h"
 #include "esp_gmf_app_sys.h"
 #include "esp_littlefs.h"
@@ -29,13 +30,16 @@ extern "C" void app_main()
   espp::Logger logger({.tag = "MAIN", .level = espp::Logger::Verbosity::DEBUG});
   logger.info("Bootup");
 
+  // Set the log level for the "SDIO_SLAVE" tag to VERBOSE
+  esp_log_level_set("SDIO_SLAVE", ESP_LOG_VERBOSE);
+  // esp_log_level_set("H_SDIO_DRV", ESP_LOG_VERBOSE);
+
   // Initialize network interface
   ESP_ERROR_CHECK(esp_netif_init());
   // Create default event loop
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  esp_board_manager_init();
-  esp_gmf_app_cli_init("cyber-eye> ", NULL);
+  ESP_ERROR_CHECK(esp_board_manager_init());
 
   // Create and initialize player
   auto player = std::make_unique<audio::MusicPlayer>();
@@ -62,16 +66,19 @@ extern "C" void app_main()
   g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
   g_http_controller->start_task();
 
-  // wifi::StaCredentials creds({.ssid = CONFIG_ESP_WIFI_SSID,
-  //                             .password = CONFIG_ESP_WIFI_PASSWORD});
-  // wifi::set_mode(wifi::Mode::STA, creds);
-
-  // wifi::set_mode(wifi::Mode::AP, {});
+  // ctrl::VideoRecorder recorder;
+  // if (recorder.init() != ESP_OK)
+  // {
+  //   logger.error("Recorder init failed");
+  //   return;
+  // }
 
   while (1)
   {
-    // infinite main loop
-    // vTaskDelay(pdMS_TO_TICKS(100));
-    std::this_thread::sleep_for(100ms);
+    // Log table to console
+    // Run for 6 seconds, logging FPS every 3 s, then print summary and exit
+    // recorder.start_benchmark(6);
+    // logger.info("Task list:\n{}", tasks::to_table());
+    std::this_thread::sleep_for(5s);
   }
 }

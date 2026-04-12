@@ -106,3 +106,16 @@ I (00:02:15.576) : └───────────────────�
 
 
 ### SLAVE FIRMWARE UPDATE https://github.com/espressif/esp-hosted-mcu/blob/main/examples/host_performs_slave_ota/README.md
+
+
+### GREP CMD: `grep -r "sdio_read\"" managed_components/espressif__esp_hosted/`
+
+
+## Launching Cyber-Eye console from https://cyber-eye.przemyslaw-swiderski7.workers.dev/
+
+Ubuntu terminal:
+```bash
+firefox -P dev --no-remote
+```
+
+`security.mixed_content.block_active_content` set to `false`.

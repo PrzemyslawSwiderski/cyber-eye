@@ -13,20 +13,6 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 1.0.36
-  espp/cli:
-    component_hash: da7092b2ffcdf2620aa4fa784eb81eae8b4f518f23e86ecda7e929def4b85e96
-    dependencies:
-    - name: espp/logger
-      registry_url: https://components.espressif.com
-      require: private
-      version: '>=1.0'
-    - name: idf
-      require: private
-      version: '>=5.0'
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 1.0.36
   espp/file_system:
     component_hash: ae9634480bb390059dcc37130643746ec16c81660a2586f55e5658e9b1cf4e00
     dependencies:
@@ -561,12 +547,12 @@ dependencies:
       type: service
     version: 0.8.1
   espressif/gmf_core:
-    component_hash: f9c90352ace606122ddecc812a7e88d09edf54e8280fb6c6e63cf24fae44bcd7
+    component_hash: 3ad2289200a2ae858cf14965807cdfd7da58ad9eebfaa6f4f22bb05812b83a75
     dependencies: []
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 0.8.0
+    version: 0.8.1
   espressif/gmf_io:
     component_hash: ac185ae5bb5f4dc777a361fa45f73c96fdebd315905a8e8a3bc8067c80452887
     dependencies:
@@ -637,7 +623,7 @@ dependencies:
       type: service
     version: 0.8.0
   espressif/gmf_video:
-    component_hash: 3aa74963d8fec677340f3bbffaec3cf220e3b5423eefd6744261f1641526a019
+    component_hash: 4ca1ebeab87aae87e9bd274f943e81110b87b5e42146652f334dec9c1d7de52d
     dependencies:
     - name: espressif/esp_image_effects
       registry_url: https://components.espressif.com
@@ -654,7 +640,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 0.8.1
+    version: 0.8.2
   espressif/usb_host_uvc:
     component_hash: f20c4e4dea50536e2e29daaf589b5f5984402284c155867daef27d6b64869f78
     dependencies:
@@ -707,7 +693,6 @@ dependencies:
       type: service
     version: 1.20.1
 direct_dependencies:
-- espp/cli
 - espp/ftp
 - espressif/cjson
 - espressif/esp_board_manager
@@ -717,6 +702,6 @@ direct_dependencies:
 - espressif/gmf_app_utils
 - espressif/gmf_loader
 - idf
-manifest_hash: 76212843ed7f920d5ae0c8db87db249cf7ed0d955ea266b5e1b545e053566dc3
+manifest_hash: a67aa21a6be992ca4a3afbabdac8f24e74fd39b9d620b20f167e5482190407db
 target: esp32p4
 version: 2.0.0

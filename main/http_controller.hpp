@@ -13,6 +13,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "task.hpp"
+#include "tasks_mod.hpp"
+
+#define HTTP_SERVER_STACK_SIZE (16 * 1024) // 16KB
+#define HTTP_SERVER_PRIORITY 10
+#define HTTP_SERVER_CORE_ID 0
 
 namespace ctrl
 {
@@ -85,10 +90,10 @@ namespace ctrl
 
       httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
       http_config.server_port = config_.port;
-      http_config.max_uri_handlers = 20;
-      http_config.task_priority = 5;
-      http_config.stack_size = 40 * 1024;
-      http_config.core_id = 0;
+      http_config.max_uri_handlers = 27;
+      http_config.task_priority = HTTP_SERVER_PRIORITY;
+      http_config.stack_size = HTTP_SERVER_STACK_SIZE;
+      http_config.core_id = HTTP_SERVER_CORE_ID;
 
       if (httpd_start(&http_server_, &http_config) != ESP_OK)
       {
@@ -281,32 +286,11 @@ namespace ctrl
     {
       log_request(req, "/api/system/tasks");
 
-      cJSON *root = cJSON_CreateObject();
-      cJSON *tasks = cJSON_CreateArray();
+      // Log table to console
+      instance_->logger_.info("Task list:\n{}", tasks::to_table());
 
-      UBaseType_t task_count = uxTaskGetNumberOfTasks();
-      TaskStatus_t *task_status = (TaskStatus_t *)malloc(task_count * sizeof(TaskStatus_t));
-
-      if (task_status)
-      {
-        task_count = uxTaskGetSystemState(task_status, task_count, nullptr);
-        instance_->logger_.debug("Found {} tasks", task_count);
-
-        for (UBaseType_t i = 0; i < task_count; i++)
-        {
-          cJSON *task = cJSON_CreateObject();
-          cJSON_AddStringToObject(task, "name", task_status[i].pcTaskName);
-          cJSON_AddNumberToObject(task, "priority", task_status[i].uxCurrentPriority);
-          cJSON_AddNumberToObject(task, "stack_hwm", task_status[i].usStackHighWaterMark);
-          cJSON_AddNumberToObject(task, "state", task_status[i].eCurrentState);
-          cJSON_AddItemToArray(tasks, task);
-        }
-        free(task_status);
-      }
-
-      cJSON_AddNumberToObject(root, "task_count", task_count);
-      cJSON_AddItemToObject(root, "tasks", tasks);
-      send_json(req, root);
+      // Send JSON to client
+      send_json(req, tasks::to_json());
       return ESP_OK;
     }
 
@@ -341,7 +325,7 @@ namespace ctrl
 
       return ESP_OK;
     }
-    
+
     static esp_err_t handle_signal_info(httpd_req_t *req)
     {
       log_request(req, "/api/wifi/info");

@@ -1,0 +1,261 @@
+[VideoRec/I][410.650]: FPS: 43.2  last_frame=22165B  total=265  dropped=0
+[VideoRec/I][410.770]: Benchmark done: avg_fps=43.1  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][410.770]: Benchmark started, duration=6s
+[VideoRec/I][413.780]: FPS: 44.7  last_frame=29749B  total=135  dropped=0
+[MAIN/I][416.760]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.5%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5292 B   OK           0.5%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][416.770]: Benchmark done: avg_fps=44.0  total=264  dropped=0  drop_rate=0.0%
+[VideoRec/I][416.900]: Benchmark started, duration=6s
+[VideoRec/I][419.910]: FPS: 45.0  last_frame=22208B  total=136  dropped=0
+[MAIN/I][422.890]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.5%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5296 B   OK           0.5%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][422.900]: Benchmark done: avg_fps=44.1  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][423.030]: Benchmark started, duration=6s
+[VideoRec/I][426.030]: FPS: 44.9  last_frame=22654B  total=135  dropped=0
+[MAIN/I][429.020]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.6%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5292 B   OK           0.5%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][429.040]: FPS: 43.2  last_frame=12235B  total=265  dropped=0
+[VideoRec/I][429.160]: Benchmark done: avg_fps=43.1  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][429.160]: Benchmark started, duration=6s
+[VideoRec/I][432.160]: FPS: 44.9  last_frame=18785B  total=135  dropped=0
+[MAIN/I][435.150]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.6%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5296 B   OK           0.5%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][435.170]: FPS: 43.2  last_frame=29620B  total=265  dropped=0
+[VideoRec/I][435.290]: Benchmark done: avg_fps=43.1  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][435.290]: Benchmark started, duration=6s
+[VideoRec/I][438.290]: FPS: 44.8  last_frame=11797B  total=135  dropped=0
+[MAIN/I][441.280]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.5%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5292 B   OK           0.5%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][441.300]: FPS: 43.2  last_frame=22284B  total=265  dropped=0
+[VideoRec/I][441.420]: Benchmark done: avg_fps=43.1  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][441.420]: Benchmark started, duration=6s
+[VideoRec/I][444.430]: FPS: 44.7  last_frame=29749B  total=135  dropped=0
+[MAIN/I][447.410]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.5%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5296 B   OK           0.5%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][447.420]: Benchmark done: avg_fps=44.0  total=264  dropped=0  drop_rate=0.0%
+[VideoRec/I][447.550]: Benchmark started, duration=6s
+[VideoRec/I][450.560]: FPS: 45.0  last_frame=22396B  total=136  dropped=0
+[MAIN/I][453.540]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.5%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5292 B   OK           0.5%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][453.550]: Benchmark done: avg_fps=44.1  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][453.680]: Benchmark started, duration=6s
+[VideoRec/I][456.680]: FPS: 45.0  last_frame=22833B  total=135  dropped=0
+[MAIN/I][459.670]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE   100.0%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.5%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5296 B   OK           0.5%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][459.680]: FPS: 43.2  last_frame=12027B  total=265  dropped=0
+[VideoRec/I][459.810]: Benchmark done: avg_fps=43.2  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][459.810]: Benchmark started, duration=6s
+[VideoRec/I][462.810]: FPS: 44.9  last_frame=18400B  total=135  dropped=0
+[MAIN/I][465.800]: Task list:
+Name             State  Pri Core  BasP  Free(mn) Pressure      CPU%
+----------------------------------------------------------------------------
+IDLE0            RDY      0   C0     0    1240 B   MODERATE    99.9%
+IDLE1            RDY      0   C1     0    1216 B   MODERATE    95.5%
+venc_0           BLK     14   C1    14   13808 B   OK           3.9%
+vid_bench        BLK     12   C1    12    5292 B   OK           0.5%
+sdio_read        BLK     23  any    23    3200 B   OK           0.0%
+main             RUN      1   C0     1     992 B   HIGH         0.0%
+tiT              BLK     15   C0    15    6752 B   OK           0.0%
+sdio_process_rx  BLK     23  any    23    3032 B   OK           0.0%
+sdio_rx_buf      BLK     23  any    23    1208 B   MODERATE     0.0%
+Tmr Svc          BLK      1  any     1    1720 B   MODERATE     0.0%
+ipc0             SUS     24   C0    24     596 B   HIGH         0.0%
+FtpServer::acce  BLK      5  any     5    3304 B   OK           0.0%
+ipc1             SUS     24   C1    24     720 B   HIGH         0.0%
+sdio_write       BLK     23  any    23    4336 B   OK           0.0%
+rpc_rx           BLK     23  any    23    3048 B   OK           0.0%
+rpc_tx           BLK     23  any    23    3288 B   OK           0.0%
+sys_evt          BLK     20   C0    20     680 B   HIGH         0.0%
+console_repl     BLK      2  any     2    2544 B   OK           0.0%
+esp_timer        SUS     22   C0    22    3792 B   OK           0.0%
+----------------------------------------------------------------------------
+CPU% measured over last 1000 ms window
+
+[VideoRec/I][465.820]: FPS: 43.2  last_frame=29913B  total=265  dropped=0
+[VideoRec/I][465.940]: Benchmark done: avg_fps=43.2  total=265  dropped=0  drop_rate=0.0%
+[VideoRec/I][465.940]: Benchmark started, duration=6s
+[VideoRec/I][468.940]: FPS: 44.8  last_frame=11991B  total=135  dropped=0

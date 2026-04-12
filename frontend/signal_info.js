@@ -1,3 +1,4 @@
+import { getBaseUrl } from './config.js';
 const signalText = document.getElementById('signalText');
 const tempText = document.getElementById('tempText');
 
@@ -14,28 +15,25 @@ function signalBars(dbm) {
   return '░░░░░ No signal';
 }
 
-async function pollSignal(deadline) {
-  if (pendingBitmap || (deadline && deadline.timeRemaining() < 10)) {
-    scheduleSignalPoll(500);
-    return;
-  }
-
+async function pollSignal() {
   try {
-    const res = await fetch(getSignalUrl(), { signal: AbortSignal.timeout(500) });
+    const signalUrl = `${getBaseUrl()}/api/wifi/info`;
+    const res = await fetch(signalUrl, { signal: AbortSignal.timeout(500) });
     const { wifi_signal_strength: s, temperature_sensor_get_celsius: t } = await res.json();
     signalText.innerHTML = `Signal: ${s} dBm<br><span class="font-monospace">${signalBars(s)}</span>`;
     tempText.textContent = t != null ? `Temp: ${t.toFixed(1)} °C` : 'Temp: N/A';
   } catch (e) {
+    // console.error(e);
     signalText.textContent = e.name === 'TimeoutError' ? 'Signal: timeout' : 'Signal: N/A';
   }
 }
 
-function scheduleSignalPoll(delay = 3000) {
+export function scheduleSignalPoll(delay) {
   clearTimeout(signalInterval);
   clearInterval(signalInterval);
 
   signalInterval = setTimeout(() => {
-    const run = (deadline) => pollSignal(deadline);
+    const run = () => pollSignal();
 
     if (typeof scheduler !== 'undefined' && scheduler.postTask)
       scheduler.postTask(() => run(null), { priority: 'background' });
@@ -55,7 +53,7 @@ function scheduleSignalPoll(delay = 3000) {
   }, delay);
 }
 
-function stopSignalPoll() {
+export function stopSignalPoll() {
   clearTimeout(signalInterval);
   clearInterval(signalInterval);
   signalInterval = null;
