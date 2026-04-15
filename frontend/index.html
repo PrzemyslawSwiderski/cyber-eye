@@ -5,103 +5,191 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>👁️ Cyber Eye</title>
-  <link rel="stylesheet" href="bootstrap.min.css" />
+  <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 
-<body class="bg-black d-flex flex-column min-vh-100">
-  <!-- Top bar -->
-  <div id="topBar" class="d-flex flex-column px-3 py-2 border-bottom border-secondary gap-2">
+<body>
 
-    <!-- Row 1: Connection -->
-    <div class="d-flex align-items-center gap-2">
-      <label for="inputBaseUrl" class="text-secondary text-nowrap small mb-0">Base URL</label>
-      <button id="btnApUrl" class="btn btn-sm btn-outline-secondary">AP</button>
-      <input id="inputBaseUrl" type="text" value="http://192.168.1.17:8080" spellcheck="false"
-        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:280px;" />
-      <button id="btnConnect" class="btn btn-sm btn-success ms-1">Connect</button>
-      <button id="btnDisconnect" class="btn btn-sm btn-danger" disabled>Disconnect</button>
-    </div>
+  <div id="appShell">
 
-    <!-- Row 2: WiFi mode -->
-    <div class="d-flex align-items-center gap-2">
-      <span class="text-secondary text-nowrap small">WiFi Mode</span>
-      <button id="btnApMode" class="btn btn-sm btn-outline-warning">📡 Switch to AP</button>
-      <label for="inputSsid" class="text-secondary text-nowrap small mb-0">SSID</label>
-      <input id="inputSsid" type="text" placeholder="Network name" spellcheck="false"
-        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:180px;" />
-      <label for="inputPassword" class="text-secondary text-nowrap small mb-0">Password</label>
-      <input id="inputPassword" type="password" placeholder="••••••••" spellcheck="false"
-        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:160px;" />
-      <button id="btnStaConnect" class="btn btn-sm btn-outline-info">🔗 Connect STA</button>
-      <span id="wifiStatus" class="small ms-2"></span>
-    </div>
+    <div id="formPanel">
 
-    <!-- Row 3: System -->
-    <div class="d-flex align-items-start gap-2">
-      <span class="text-secondary text-nowrap small mt-1">System</span>
-      <button id="btnFetchTasks" class="btn btn-sm btn-outline-secondary">📋 Fetch Tasks</button>
-      <textarea id="tasksLog" readonly spellcheck="false" placeholder="Task list will appear here…"
-        class="form-control form-control-sm bg-dark text-light border-secondary font-monospace small"
-        style="width:670px; height:200px; resize:vertical;"></textarea>
-      <button id="btnReset" class="btn btn-sm btn-outline-danger">⚠ Reset ESP</button>
-    </div>
+      <div class="panel-header">
+        <span class="panel-title">👁 CYBER EYE</span>
+      </div>
 
-    <!-- Row 4: Music Player -->
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-      <span class="text-secondary text-nowrap small">Music</span>
+      <div id="formContent" class="panel-body">
 
-      <input id="inputMusicFile" type="text" value="/sdcard/test.mp3" placeholder="/sdcard/test.mp3" spellcheck="false"
-        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:200px;" />
-      <button id="btnMusicPlay" class="btn btn-sm btn-outline-success">▶ Play</button>
-      <button id="btnMusicStop" class="btn btn-sm btn-outline-danger">■ Stop</button>
+        <!-- Section: Connection -->
+        <section class="form-section">
+          <h6 class="section-label">Connection</h6>
+          <div class="row g-2 align-items-center mt-1">
+            <div class="col-auto">
+              <label class="field-label">Prefil with:</label>
+            </div>
+            <div class="col-auto">
+              <button id="btnApUrl" class="btn btn-sm hud-btn">AP</button>
+            </div>
+            <div class="col-auto">
+              <button id="btnSta1Url" class="btn btn-sm hud-btn">STA 1</button>
+            </div>
+            <div class="col-auto">
+              <button id="btnHsUrl" class="btn btn-sm hud-btn">HS</button>
+            </div>
+          </div>
+          <div class="row g-2 align-items-center mt-1">
+            <div class="col-auto">
+              <label for="inputBaseUrl" class="field-label">Base URL</label>
+            </div>
+            <div class="col">
+              <input id="inputBaseUrl" type="text" value="http://192.168.1.17:8080" spellcheck="false"
+                class="form-control form-control-sm cyber-input" />
+            </div>
+          </div>
+          <div class="row g-2 mt-1">
+            <div class="col-auto">
+              <button id="btnConnect" class="btn btn-sm btn-success">Connect</button>
+            </div>
+            <div class="col-auto">
+              <button id="btnDisconnect" class="btn btn-sm btn-danger" disabled>Disconnect</button>
+            </div>
+            <div class="col-auto">
+              <button id="btnShowVideo" class="btn btn-sm hud-btn">▶ Show Video</button>
+            </div>
+          </div>
+        </section>
 
-      <div class="vr bg-secondary mx-1" style="opacity:.4;"></div>
+        <!-- Section: WiFi Mode -->
+        <section class="form-section">
+          <h6 class="section-label">WiFi Mode</h6>
+          <div class="row g-2 align-items-center">
+            <div class="col-auto">
+              <button id="btnApMode" class="btn btn-sm btn-outline-warning">📡 Switch to AP</button>
+            </div>
+          </div>
+          <div class="row g-2 align-items-center mt-1">
+            <div class="col-auto">
+              <label for="inputSsid" class="field-label">SSID</label>
+            </div>
+            <div class="col">
+              <input id="inputSsid" type="text" placeholder="Network name" spellcheck="false"
+                class="form-control form-control-sm cyber-input" />
+            </div>
+          </div>
+          <div class="row g-2 align-items-center mt-1">
+            <div class="col-auto">
+              <label for="inputPassword" class="field-label">Password</label>
+            </div>
+            <div class="col">
+              <input id="inputPassword" type="password" placeholder="••••••••" spellcheck="false"
+                class="form-control form-control-sm cyber-input" />
+            </div>
+          </div>
+          <div class="row g-2 align-items-center mt-1">
+            <div class="col-auto">
+              <button id="btnStaConnect" class="btn btn-sm btn-outline-info">🔗 Connect STA</button>
+            </div>
+            <div class="col">
+              <span id="wifiStatus" class="status-text"></span>
+            </div>
+          </div>
+        </section>
 
-      <label for="inputVolume" class="text-secondary text-nowrap small mb-0">Vol</label>
-      <input id="inputVolume" type="number" min="0" max="100" value="50"
-        class="form-control form-control-sm bg-dark text-light border-secondary" style="max-width:70px;" />
-      <button id="btnVolumeSet" class="btn btn-sm btn-outline-secondary">Set</button>
+        <!-- Section: System -->
+        <section class="form-section">
+          <h6 class="section-label">System</h6>
+          <div class="row g-2">
+            <div class="col-auto">
+              <button id="btnFetchTasks" class="btn btn-sm hud-btn">📋 Fetch Tasks</button>
+            </div>
+            <div class="col-auto">
+              <button id="btnReset" class="btn btn-sm btn-outline-danger">⚠ Reset ESP</button>
+            </div>
+          </div>
+          <div class="row g-2 mt-1">
+            <div class="col-12">
+              <textarea id="tasksLog" readonly spellcheck="false" placeholder="Task list will appear here…"
+                class="form-control form-control-sm cyber-input font-monospace tasks-log"></textarea>
+            </div>
+          </div>
+        </section>
 
-      <span id="musicStatus" class="small text-secondary ms-1"></span>
-    </div>
+        <!-- Section: Music Player -->
+        <section class="form-section">
+          <h6 class="section-label">Music Player</h6>
+          <div class="row g-2 align-items-center">
+            <div class="col-auto">
+              <label for="inputMusicFile" class="field-label">File</label>
+            </div>
+            <div class="col">
+              <input id="inputMusicFile" type="text" value="/sdcard/test.mp3" placeholder="/sdcard/test.mp3"
+                spellcheck="false" class="form-control form-control-sm cyber-input" />
+            </div>
+          </div>
+          <div class="row g-2 align-items-center mt-1">
+            <div class="col-auto">
+              <button id="btnMusicPlay" class="btn btn-sm btn-outline-success">▶ Play</button>
+            </div>
+            <div class="col-auto">
+              <button id="btnMusicStop" class="btn btn-sm btn-outline-danger">■ Stop</button>
+            </div>
+          </div>
+          <div class="row g-2 align-items-center mt-1">
+            <div class="col-auto">
+              <label for="inputVolume" class="field-label">Volume</label>
+            </div>
+            <div class="col-auto">
+              <input id="inputVolume" type="number" min="0" max="100" value="50"
+                class="form-control form-control-sm cyber-input volume-input" />
+            </div>
+            <div class="col-auto">
+              <button id="btnVolumeSet" class="btn btn-sm hud-btn">Set</button>
+            </div>
+            <div class="col">
+              <span id="musicStatus" class="status-text"></span>
+            </div>
+          </div>
+        </section>
 
-  </div>
-
-  <button id="topBarToggle" title="Toggle toolbar">▲</button>
-
-  <!-- Viewport: overlay + canvas stacked via CSS, not DOM nesting -->
-  <div id="viewport" class="flex-grow-1 position-relative overflow-hidden">
-
-    <div id="canvasWrap" class="w-100 h-100">
-      <canvas id="canvas"></canvas>
-    </div>
-
-    <!-- HUD overlay — sibling of canvasWrap, not child -->
-    <div id="overlay" class="hud-panel">
-      <span id="statusText">Disconnected</span>
-      <span id="fpsText">FPS: --</span>
-      <span id="signalText">Signal: --</span>
-      <span id="tempText">Temp: --</span>
-    </div>
-
-    <!-- Settings menu -->
-    <div id="settings">
-      <button id="settingsToggle" class="hud-btn">⚙ Adjust</button>
-      <div id="settingsPanel" class="hud-panel">
-        <label>Brightness <span id="brightnessVal">100%</span></label>
-        <input type="range" id="brightness" min="0" max="200" value="100" />
-        <label>Contrast <span id="contrastVal">100%</span></label>
-        <input type="range" id="contrast" min="0" max="200" value="100" />
-        <label>Exposure <span id="exposureVal">0</span></label>
-        <input type="range" id="exposure" min="-100" max="100" value="0" />
-        <button id="settingsReset" class="hud-btn">Reset</button>
       </div>
     </div>
 
+    <div id="viewportHandle">
+      <button id="viewportToggle" class="hud-btn handle-btn" title="Toggle viewport">◀</button>
+    </div>
+
+    <div id="viewportPanel">
+
+      <div id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div id="overlay" class="hud-panel">
+        <span id="statusText">Disconnected</span>
+        <span id="fpsText">FPS: --</span>
+        <span id="signalText">Signal: --</span>
+        <span id="tempText">Temp: --</span>
+      </div>
+
+      <div id="settings">
+        <button id="settingsToggle" class="hud-btn">⚙ Adjust</button>
+        <div id="settingsPanel" class="hud-panel">
+          <label>Brightness <span id="brightnessVal">100%</span></label>
+          <input type="range" id="brightness" min="0" max="200" value="100" />
+          <label>Contrast <span id="contrastVal">100%</span></label>
+          <input type="range" id="contrast" min="0" max="200" value="100" />
+          <label>Exposure <span id="exposureVal">0</span></label>
+          <input type="range" id="exposure" min="-100" max="100" value="0" />
+          <button id="settingsReset" class="hud-btn">Reset</button>
+        </div>
+      </div>
+
+    </div>
+
   </div>
 
-  <script src="bootstrap.bundle.min.js"></script>
+  <script src="bootstrap/bootstrap.bundle.min.js"></script>
   <script type="module" src="signal_info.js"></script>
   <script type="module" src="video_settings.js"></script>
   <script type="module" src="wifi_change.js"></script>
@@ -110,6 +198,7 @@
   <script type="module" src="config.js"></script>
   <script type="module" src="video_stream.js"></script>
   <script type="module" src="main.js"></script>
+
 </body>
 
 </html>

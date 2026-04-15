@@ -73,13 +73,19 @@ function cleanup() {
 btnConnect.addEventListener('click', connect);
 btnDisconnect.addEventListener('click', disconnect);
 
-// ── Top bar collapse ──────────────────────────────────────────────────────────
-const topBar = document.getElementById('topBar');
-const topBarToggle = document.getElementById('topBarToggle');
 
-topBarToggle.addEventListener('click', () => {
-  const collapsed = topBar.classList.toggle('collapsed');
-  topBarToggle.classList.toggle('collapsed', collapsed);
-  topBarToggle.textContent = collapsed ? '▼' : '▲';
-  topBarToggle.title = collapsed ? 'Expand toolbar' : 'Collapse toolbar';
-});
+// ── Panel collapse logic (no external JS module needed) ──
+
+const formPanel = document.getElementById('formPanel');
+const viewportPanel = document.getElementById('viewportPanel');
+const viewportToggle = document.getElementById('viewportToggle');
+const btnShowVideo = document.getElementById('btnShowVideo');
+
+function setViewport(open) {
+  formPanel.classList.toggle('collapsed', open);
+  viewportPanel.classList.toggle('open', open);
+  viewportToggle.textContent = open ? '▶' : '◀';
+  viewportToggle.title = open ? 'Hide viewport' : 'Show viewport';
+}
+viewportToggle.addEventListener('click', () => setViewport(!viewportPanel.classList.contains('open')));
+btnShowVideo.addEventListener('click', () => setViewport(true));
