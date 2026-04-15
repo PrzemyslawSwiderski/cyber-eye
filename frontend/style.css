@@ -1,8 +1,6 @@
 :root {
   --green: #00ff00;
-  --green-dim: rgba(0, 255, 0, 0.35);
-  --green-faint: rgba(0, 255, 0, 0.12);
-  --green-muted: rgba(0, 255, 0, 0.65);
+  --green-dim: rgba(55, 148, 55, 0.911);
   --bg-dark: #0a0a0a;
   --bg-panel: #0f0f0f;
   --bg-section: #131313;
@@ -87,6 +85,7 @@ body {
   padding: var(--pad);
   scrollbar-width: thin;
   scrollbar-color: var(--green-dim) transparent;
+  padding-bottom: 100px;
 }
 
 #formContent::-webkit-scrollbar {
@@ -122,7 +121,6 @@ body {
   text-transform: uppercase;
   margin-bottom: 8px;
   padding-bottom: 5px;
-  border-bottom: 1px solid var(--green-faint);
 }
 
 .field-label,
@@ -153,8 +151,12 @@ body {
 }
 
 .tasks-log {
+  resize: none;
   height: 140px;
-  resize: vertical;
+  max-height: 140px;
+  min-height: 300px;
+  overflow: auto;
+  white-space: pre;
 }
 
 .volume-input {
@@ -211,8 +213,6 @@ canvas {
 
 .hud-panel {
   background: rgba(0, 0, 0, 0.82);
-  border: 1px solid var(--green-dim);
-  border-radius: 4px;
   color: var(--green);
   font-family: var(--font-mono);
   font-size: var(--fs-label);
@@ -221,8 +221,6 @@ canvas {
 
 .hud-btn {
   background: rgba(0, 0, 0, 0.82);
-  border: 1px solid var(--green-dim);
-  border-radius: 4px;
   color: var(--green);
   font-family: var(--font-mono);
   font-size: var(--fs-label);
@@ -289,7 +287,7 @@ canvas {
 }
 
 #settingsPanel label span {
-  color: var(--green-muted);
+  color: var(--green);
 }
 
 #settingsPanel input[type="range"] {
