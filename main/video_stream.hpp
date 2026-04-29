@@ -18,11 +18,11 @@
 
 #define CAMERA_DEVICE_NAME "/dev/video0"
 #define STREAM_TASK_STACK_SIZE (8 * 1024) // 8KB
-#define STREAM_TASK_PRIORITY 12
+#define STREAM_TASK_PRIORITY 17
 #define STREAM_TASK_CORE_ID 1
 
-#define VENC_TASK_STACK_SIZE (16 * 1024) // 16KB
-#define VENC_TASK_PRIORITY 14            // must be higher than STREAM_TASK_PRIORITY to avoid starvation
+#define VENC_TASK_STACK_SIZE (64 * 1024) // 16KB
+#define VENC_TASK_PRIORITY 7            // must be higher than STREAM_TASK_PRIORITY to avoid starvation
 #define VENC_TASK_CORE_ID 1
 
 namespace ctrl
@@ -107,22 +107,16 @@ namespace ctrl
       instance_->logger_.info("Client connected");
       int sock = httpd_req_to_sockfd(req);
 
-      // int opt = 1;
-      // setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
-
-      // Set socket timeout
-      // struct timeval tv;
-      // tv.tv_sec = 0;
-      // tv.tv_usec = 100000; // 0.1 second timeout
-      // setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-
-      // Increase send buffer significantly
-      // int sndbuf = 65536; // 64KB
-      // setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+      int opt = 1;
+      if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+      {
+        instance_->logger_.warn("Failed to set TCP_NODELAY");
+      }
 
       // Set keepalive
-      // int keepalive = 1;
-      // setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+      int keepalive = 1;
+      if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) == -1)
+        instance_->logger_.warn("Failed to set SO_KEEPALIVE");
 
       // Send HTTP headers directly on the raw socket before handing it off
       const char *headers =
@@ -176,6 +170,41 @@ namespace ctrl
       int sock;
     };
 
+    static std::string get_frame_type(const uint8_t *data, size_t size)
+    {
+      // H264 start codes: 0x00 0x00 0x01 or 0x00 0x00 0x00 0x01
+      // Byte after start code: lower 5 bits = NAL type
+      //   NAL type 5 = IDR slice (I-frame)
+      //   NAL type 7 = SPS (often precedes I-frame)
+      //   NAL type 1 = non-IDR (P/B frame)
+
+      for (size_t i = 0; i + 4 < size; i++)
+      {
+        // Detect 4-byte start code: 0x00 0x00 0x00 0x01
+        if (data[i] == 0x00 && data[i + 1] == 0x00 &&
+            data[i + 2] == 0x00 && data[i + 3] == 0x01)
+        {
+          uint8_t nal_type = data[i + 4] & 0x1F;
+          if (nal_type == 5)
+          { // IDR slice
+            return "I-frame";
+          }
+          i += 3; // skip ahead
+        }
+        // Detect 3-byte start code: 0x00 0x00 0x01
+        else if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01)
+        {
+          uint8_t nal_type = data[i + 3] & 0x1F;
+          if (nal_type == 5)
+          { // IDR slice
+            return "I-frame";
+          }
+          i += 2; // skip ahead
+        }
+      }
+      return "P-frame";
+    }
+
     static void stream_task(void *arg)
     {
       instance_->logger_.info("Stream task started");
@@ -191,6 +220,7 @@ namespace ctrl
 
       while (true)
       {
+        int64_t frame_capture_start = esp_timer_get_time();
         esp_err_t err = esp_capture_sink_acquire_frame(ctx->sink, &frame, false);
         if (err != ESP_CAPTURE_ERR_OK)
         {
@@ -198,19 +228,36 @@ namespace ctrl
           continue;
         }
 
-        dropped_count = 0;
+        // Check if frame acquisition was too slow
+        int64_t capture_time = esp_timer_get_time() - frame_capture_start;
 
-        // Format as HTTP chunked encoding
+        int64_t send_start = esp_timer_get_time();
+
         char chunk_header[16];
         int header_len = snprintf(chunk_header, sizeof(chunk_header), "%x\r\n", frame.size);
 
         bool disconnected =
-            send(ctx->sock, chunk_header, header_len, 0) < 0 ||
-            send(ctx->sock, (const char *)frame.data, frame.size, 0) < 0 ||
+            send(ctx->sock, chunk_header, header_len, MSG_MORE) < 0 ||
+            send(ctx->sock, (const char *)frame.data, frame.size, MSG_MORE) < 0 ||
             send(ctx->sock, "\r\n", 2, 0) < 0;
 
+        int64_t send_ms = (esp_timer_get_time() - send_start) / 1000;
+
+        if (send_ms > 200)
+        {
+          std::string frame_type = get_frame_type((const uint8_t *)frame.data, frame.size);
+          int64_t capture_ms = capture_time / 1000;
+
+          instance_->logger_.warn(
+              "Slow send: {}ms, frame_size={:.1f}KB, frame_type={}, capture_ms={}",
+              send_ms,
+              frame.size / 1024.0f,
+              frame_type,
+              capture_ms);
+        }
+
         esp_capture_sink_release_frame(ctx->sink, &frame);
-        
+
         if (disconnected)
         {
           instance_->logger_.info("Client disconnected, frames={}, dropped={}", frame_count, dropped_count);
@@ -226,17 +273,17 @@ namespace ctrl
         if (elapsed_us >= 3'000'000)
         {
           float fps = fps_frame_count / (elapsed_us / 1'000'000.0f);
-          instance_->logger_.info("Streaming FPS: {:.1f}, total frames={}, dropped={}", fps, frame_count, dropped_count);
+          instance_->logger_.info(
+              "Streaming FPS: {:.1f}, total={}, dropped={}",
+              fps, frame_count, dropped_count);
           fps_frame_count = 0;
           fps_last_time = now;
         }
-        // vTaskDelay(pdMS_TO_TICKS(16)); // yeilds to other tasks and limits maximum FPS to ~62 FPS even if camera produces more
-        vTaskDelay(pdMS_TO_TICKS(27)); // yeilds to other tasks and limits maximum FPS to ~37 FPS even if camera produces more
+
+        vTaskDelay(pdMS_TO_TICKS(5));
       }
 
-      // Send chunked EOF
       send(ctx->sock, "0\r\n\r\n", 5, 0);
-
       close(ctx->sock);
       delete ctx;
 

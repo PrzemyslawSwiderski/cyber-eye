@@ -45,13 +45,38 @@ Increase the `CONFIG_VFS_MAX_COUNT` to maximum value:
 CONFIG_VFS_MAX_COUNT=20
 ```
 
-### VLC display lag
+### Video stream perfomance tests
 
 Use `ffplay` for the minimal latency:
 
 ```
 ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -vf "setpts=0,hflip,vflip" http://192.168.1.17:8080/stream.h264
 ```
+
+### Latency measure
+
+#### NJU_Swiatlowod_093A
+
+##### Ping
+ping 192.168.1.17
+
+##### Simulate standard RTP/UDP H264 packet (most realistic)
+ping -s 1400 -c 100 -i 0.2 192.168.1.17
+
+##### Small packets - if these are clean, it's definitely buffer bloat
+ping -s 32 -c 100 -i 0.2 192.168.1.17
+
+#### Cyber Eye Access Point
+
+##### Ping
+ping 192.168.4.1
+
+##### Simulate standard RTP/UDP H264 packet (most realistic)
+ping -s 1400 -c 100 -i 0.2 192.168.4.1
+
+##### Small packets - if these are clean, it's definitely buffer bloat
+ping -s 32 -c 100 -i 0.2 192.168.4.1
+
 
 ### Firefox flags for smooth video (`about:config` page)
 

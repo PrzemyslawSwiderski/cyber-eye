@@ -16,7 +16,7 @@
 #include "tasks_mod.hpp"
 
 #define HTTP_SERVER_STACK_SIZE (16 * 1024) // 16KB
-#define HTTP_SERVER_PRIORITY 10
+#define HTTP_SERVER_PRIORITY 15
 #define HTTP_SERVER_CORE_ID 0
 
 namespace ctrl

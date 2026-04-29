@@ -31,8 +31,10 @@ extern "C" void app_main()
   logger.info("Bootup");
 
   // Set the log level for the "SDIO_SLAVE" tag to VERBOSE
-  esp_log_level_set("SDIO_SLAVE", ESP_LOG_VERBOSE);
   // esp_log_level_set("H_SDIO_DRV", ESP_LOG_VERBOSE);
+  // esp_log_level_set("H_SDIO_DRV", ESP_LOG_DEBUG);
+  // esp_log_level_set("sdio_diag", ESP_LOG_DEBUG);
+  // esp_log_level_set("lwip", ESP_LOG_DEBUG);
 
   // Initialize network interface
   ESP_ERROR_CHECK(esp_netif_init());
@@ -51,7 +53,7 @@ extern "C" void app_main()
   while (!wifi::is_connected())
   {
     // waiting for the WIFI connection
-    std::this_thread::sleep_for(50ms);
+    vTaskDelay(pdMS_TO_TICKS(50));
   }
 
   auto ip = wifi::get_ip();
@@ -79,6 +81,7 @@ extern "C" void app_main()
     // Run for 6 seconds, logging FPS every 3 s, then print summary and exit
     // recorder.start_benchmark(6);
     // logger.info("Task list:\n{}", tasks::to_table());
-    std::this_thread::sleep_for(5s);
+    // std::this_thread::sleep_for(5s);
+    vTaskDelay(pdMS_TO_TICKS(5000));
   }
 }

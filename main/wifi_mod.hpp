@@ -69,6 +69,7 @@ namespace wifi
     wifi_config_t wifi_config{};
     set_str(wifi_config.sta.ssid, sizeof(wifi_config.sta.ssid), credentials.ssid);
     set_str(wifi_config.sta.password, sizeof(wifi_config.sta.password), credentials.password);
+    wifi_config.sta.he_dcm_set = 1;
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
@@ -81,6 +82,7 @@ namespace wifi
     set_str(wifi_config.ap.password, sizeof(wifi_config.ap.password), CONFIG_ESP_AP_WIFI_PASSWORD);
     wifi_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
     wifi_config.ap.max_connection = 3;
+    wifi_config.ap.channel = WIFI_CHANNEL_1;
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
@@ -343,19 +345,43 @@ namespace wifi
 
   inline int8_t get_signal_strength()
   {
-    if (get_current_mode() != Mode::STA || !sta_netif)
-    {
-      logger.warn("RSSI only available in STA mode");
-      return -127;
-    }
+    Mode current_mode = get_current_mode();
 
-    wifi_ap_record_t rec{};
-    if (esp_err_t err = esp_wifi_sta_get_ap_info(&rec); err != ESP_OK)
+    if (current_mode == Mode::STA && sta_netif)
     {
-      logger.error("Failed to get RSSI: {}", esp_err_to_name(err));
+      // === We're in Station mode → get RSSI of the AP we're connected to ===
+      wifi_ap_record_t rec{};
+      if (esp_err_t err = esp_wifi_sta_get_ap_info(&rec); err != ESP_OK)
+      {
+        logger.error("Failed to get RSSI from AP: {}", esp_err_to_name(err));
+        return -127;
+      }
+      return rec.rssi;
+    }
+    else if (current_mode == Mode::AP)
+    {
+      // === We're in AP mode → get RSSI of the first connected client ===
+      wifi_sta_list_t sta_list{};
+      if (esp_err_t err = esp_wifi_ap_get_sta_list(&sta_list); err != ESP_OK)
+      {
+        logger.error("Failed to get connected stations list: {}", esp_err_to_name(err));
+        return -127;
+      }
+
+      if (sta_list.num == 0)
+      {
+        logger.warn("No stations connected to AP");
+        return -127; // or return 0 if you prefer
+      }
+
+      // Return RSSI of the first connected client
+      return sta_list.sta[0].rssi;
+    }
+    else
+    {
+      logger.warn("RSSI only available in STA or AP mode");
       return -127;
     }
-    return rec.rssi;
   }
 
   inline std::string get_ip()

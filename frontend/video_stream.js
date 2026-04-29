@@ -203,7 +203,6 @@ export class VideoStreamHandler {
           this.statusCallback('Stream ended');
           break;
         }
-
         const chunk = concat(remainder, value);
         const nals = splitNalUnits(chunk);
         // const nals = [];

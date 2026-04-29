@@ -2,6 +2,8 @@ import { getBaseUrl } from './config.js';
 const signalText = document.getElementById('signalText');
 const tempText = document.getElementById('tempText');
 
+const signalPollingInterval = 5000; // 5 seconds
+
 let signalInterval = null;
 
 function signalBars(dbm) {
@@ -18,7 +20,7 @@ function signalBars(dbm) {
 async function pollSignal() {
   try {
     const signalUrl = `${getBaseUrl()}/api/wifi/info`;
-    const res = await fetch(signalUrl, { signal: AbortSignal.timeout(500) });
+    const res = await fetch(signalUrl);
     const { wifi_signal_strength: s, temperature_sensor_get_celsius: t } = await res.json();
     signalText.innerHTML = `Signal: ${s} dBm<br><span class="font-monospace">${signalBars(s)}</span>`;
     tempText.textContent = t != null ? `Temp: ${t.toFixed(1)} °C` : 'Temp: N/A';
@@ -38,7 +40,7 @@ export function scheduleSignalPoll(delay) {
     if (typeof scheduler !== 'undefined' && scheduler.postTask)
       scheduler.postTask(() => run(null), { priority: 'background' });
     else if (typeof requestIdleCallback !== 'undefined')
-      requestIdleCallback(run, { timeout: 2000 });
+      requestIdleCallback(run);
     else
       run(null);
 
@@ -46,10 +48,10 @@ export function scheduleSignalPoll(delay) {
       if (typeof scheduler !== 'undefined' && scheduler.postTask)
         scheduler.postTask(() => pollSignal(null), { priority: 'background' });
       else if (typeof requestIdleCallback !== 'undefined')
-        requestIdleCallback(pollSignal, { timeout: 2000 });
+        requestIdleCallback(pollSignal);
       else
         pollSignal(null);
-    }, 3000);
+    }, signalPollingInterval);
   }, delay);
 }
 

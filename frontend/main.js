@@ -1,4 +1,5 @@
 import { VideoStreamHandler } from './video_stream.js';
+import { setBaseUrl } from './config.js';
 import { scheduleSignalPoll, stopSignalPoll } from './signal_info.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
