@@ -55,28 +55,64 @@ ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -vf "se
 
 ### Latency measure
 
-#### NJU_Swiatlowod_093A
+#### IPS:
 
-##### Ping
+##### NJU network
+- Latife -> 192.168.1.12
+- ESP -> 192.168.1.17
+
+##### ESP AP mode
+- Latife -> 192.168.4.2
+- ESP -> 192.168.4.1
+
+#### Ping
 ping 192.168.1.17
 
-##### Simulate standard RTP/UDP H264 packet (most realistic)
+#### Simulate standard RTP/UDP H264 packet (most realistic)
 ping -s 1400 -c 100 -i 0.2 192.168.1.17
 
-##### Small packets - if these are clean, it's definitely buffer bloat
+#### Small packets - if these are clean, it's definitely buffer bloat
 ping -s 32 -c 100 -i 0.2 192.168.1.17
 
-#### Cyber Eye Access Point
+#### Iperf
 
-##### Ping
-ping 192.168.4.1
+- Run the demo as station mode and join the target AP
+  - `sta_connect <ssid> <password>`
+  - NOTE: the dut is started in station mode by default. If you want to use the dut as softap, please set wifi mode first:
+    - `wifi_mode ap`
+    - `ap_set <dut_ap_ssid> <dut_ap_password>`
 
-##### Simulate standard RTP/UDP H264 packet (most realistic)
-ping -s 1400 -c 100 -i 0.2 192.168.4.1
+- Run iperf as server on AP side (TCP)
+  - `iperf -s -i 3`
 
-##### Small packets - if these are clean, it's definitely buffer bloat
-ping -s 32 -c 100 -i 0.2 192.168.4.1
+- Run iperf as client on ESP side (TCP)
+  - `iperf -c 192.168.1.12 -i 3 -t 60`
 
+
+- Run iperf as server on AP side (UDP)
+  - `iperf -u -s -i 1`
+
+- Run iperf as client on ESP side (UDP)
+  - `iperf -u -c 192.168.1.12 -i 1 -t 60`
+
+
+- Run iperf as server on ESP side (UDP)
+  - `iperf -u -s -i 1`
+
+- Run iperf as client on AP side (UDP)
+  - `iperf -u -c 192.168.1.17 -b 6M -l 1400 -i 1 -t 60 --verbose`
+  - `iperf -u -c 192.168.1.12 -b 6M -l 1400 -i 1 -t 60`
+
+```
+# 3 Mbps stream (480p/720p HD simulation)
+iperf -u -c <PC_IP_ADDRESS> -b 3M -l 1400 -i 1 -t 60
+
+# 6 Mbps stream (720p/1080p HD simulation)
+iperf -u -c <PC_IP_ADDRESS> -b 6M -l 1400 -i 1 -t 60
+
+# 10 Mbps stream (high-bitrate 1080p simulation)
+iperf -u -c <PC_IP_ADDRESS> -b 10M -l 1400 -i 1 -t 60
+```
 
 ### Firefox flags for smooth video (`about:config` page)
 
