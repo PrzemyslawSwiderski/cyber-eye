@@ -1649,6 +1649,24 @@ CONFIG_ESP_HTTP_CLIENT_EVENT_POST_TIMEOUT=2000
 # end of ESP HTTP client
 
 #
+# HTTP Server
+#
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=65536
+# default:
+CONFIG_HTTPD_MAX_URI_LEN=512
+# default:
+CONFIG_HTTPD_ERR_RESP_NO_DELAY=y
+CONFIG_HTTPD_PURGE_BUF_LEN=512
+# default:
+# CONFIG_HTTPD_LOG_PURGE_DATA is not set
+# default:
+# CONFIG_HTTPD_WS_SUPPORT is not set
+# default:
+# CONFIG_HTTPD_QUEUE_WORK_BLOCKING is not set
+CONFIG_HTTPD_SERVER_EVENT_POST_TIMEOUT=100
+# end of HTTP Server
+
+#
 # Hardware Settings
 #
 # default:
@@ -3383,6 +3401,15 @@ CONFIG_VFS_SEMIHOSTFS_MAX_MOUNT_POINTS=1
 # default:
 CONFIG_VFS_INITIALIZE_DEV_NULL=y
 # end of Virtual file system
+
+#
+# cJSON
+#
+# default:
+CONFIG_CJSON_NESTING_LIMIT=1000
+# default:
+CONFIG_CJSON_CIRCULAR_LIMIT=10000
+# end of cJSON
 
 #
 # eppp_link

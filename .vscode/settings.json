@@ -6,5 +6,6 @@
     "--background-index",
     "--query-driver=**",
     "--compile-commands-dir=/home/pswidersk/REPOS/cyber-eye/build"
-  ]
+  ],
+  "idf.currentSetup": "/home/pswidersk/.espressif/v6.0.1/esp-idf"
 }

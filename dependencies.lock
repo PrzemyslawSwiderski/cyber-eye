@@ -1,4 +1,14 @@
 dependencies:
+  espressif/cjson:
+    component_hash: e788323270d90738662d66fffa910bfe1fba019bba087f01557e70c40485b469
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.7.19~2
   espressif/eppp_link:
     component_hash: 04f7f31868b8ae6014c96132740a192d09611a6e46aaa7038c865ffc7e26b38f
     dependencies:
@@ -72,8 +82,9 @@ dependencies:
       type: idf
     version: 6.0.1
 direct_dependencies:
+- espressif/cjson
 - espressif/esp_wifi_remote
 - idf
-manifest_hash: 25c824d2ff7dae81b3b502a4553d5908e0e92c139f22ef4158115524f944355e
+manifest_hash: 874b8c9a6cc9c540d3145b127b14d97c62c37355bebe11ab127b99eff4ffd739
 target: esp32p4
 version: 3.0.0

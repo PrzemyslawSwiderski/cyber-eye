@@ -1,48 +1,38 @@
 #include "wifi_mod.hpp"
+#include "udp_server_mod.hpp"
+#include "http_controller_mod.hpp"
 #include "esp_log.h"
 
 static const char *TAG = "main";
 
 extern "C" void app_main(void)
 {
-  // Choose mode: WiFiMode::STA or WiFiMode::AP
-  WiFiMode mode = WiFiMode::AP;
-  // WiFiMode mode = WiFiMode::STA;
+  WiFiMode mode = WiFiMode::STA;
 
-  ESP_LOGI(TAG, "Starting WiFi...");
+  ESP_LOGI(TAG, "Starting ESP32 Streaming Server...");
 
-  esp_err_t ret = WiFiManager::init(mode);
-
-  if (ret == ESP_OK)
+  if (WiFiManager::init(mode) == ESP_OK)
   {
     char ip_str[16];
     WiFiManager::get_ip(ip_str, sizeof(ip_str));
+    ESP_LOGI(TAG, "WiFi ready! IP: %s", ip_str);
 
-    if (mode == WiFiMode::STA)
-    {
-      ESP_LOGI(TAG, "Connected! IP: %s", ip_str);
-    }
-    else
-    {
-      ESP_LOGI(TAG, "AP started! IP: %s", ip_str);
-      ESP_LOGI(TAG, "Connect to SSID: %s", CONFIG_ESP_WIFI_SSID);
-    }
-  }
-  else
-  {
-    ESP_LOGE(TAG, "WiFi initialization failed");
+    UDPServer::start(3333);
+
+    HTTPController::set_callbacks(
+        UDPServer::start_stream,
+        UDPServer::stop_stream,
+        UDPServer::is_streaming,
+        UDPServer::get_frame_count);
+
+    HTTPController::start(80);
+
+    ESP_LOGI(TAG, "Server ready");
+    ESP_LOGI(TAG, "POST JSON to http://%s/command", ip_str);
   }
 
   while (true)
   {
-    if (WiFiManager::is_connected())
-    {
-      ESP_LOGI(TAG, "WiFi connected");
-    }
-    else
-    {
-      ESP_LOGI(TAG, "WiFi disconnected");
-    }
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }

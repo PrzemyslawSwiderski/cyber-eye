@@ -75,13 +75,11 @@ private:
   {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED)
     {
-      wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *)event_data;
       ESP_LOGI(TAG, "station joined");
       s_is_connected = true;
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED)
     {
-      wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;
       ESP_LOGI(TAG, "station left");
       wifi_sta_list_t sta_list;
       esp_wifi_ap_get_sta_list(&sta_list);
