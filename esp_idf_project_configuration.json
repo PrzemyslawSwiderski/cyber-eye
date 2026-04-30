@@ -1,22 +1,20 @@
 {
   "main": {
     "build": {
-      "compileArgs": [ ],
-      "ninjaArgs": [ ],
-      "buildDirectoryPath": "/home/pswidersk/REPOS/cyber-eye/build",
-      "sdkconfigDefaults": [ "/home/pswidersk/REPOS/cyber-eye/board_manager.defaults", "/home/pswidersk/REPOS/cyber-eye/sdkconfig.defaults" ],
-      "sdkconfigFilePath": "/home/pswidersk/REPOS/cyber-eye/sdkconfig"
+      "compileArgs": [],
+      "ninjaArgs": [],
+      "buildDirectoryPath": "",
+      "sdkconfigDefaults": [],
+      "sdkconfigFilePath": ""
     },
-    "env": {
-      "IDF_EXTRA_ACTIONS_PATH": "/home/pswidersk/REPOS/cyber-eye/managed_components/espressif__esp_board_manager"
-    },
+    "env": {},
+    "flashBaudRate": "",
     "idfTarget": "esp32p4",
-    "flashBaudRate": "921600",
-    "monitorBaudRate": "115200",
+    "monitorBaudRate": "",
     "openOCD": {
-      "debugLevel": 2,
-      "configs": [ ],
-      "args": [ ]
+      "debugLevel": -1,
+      "configs": [],
+      "args": []
     },
     "tasks": {
       "preBuild": "",

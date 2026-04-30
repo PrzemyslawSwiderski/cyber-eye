@@ -1,6 +1,3 @@
-file(GLOB_RECURSE ALL_SRCS "main.cpp" "*.c" "*.cpp")
-
-idf_component_register(
-    SRCS ${ALL_SRCS}
-    INCLUDE_DIRS "."
-)
+idf_component_register(SRCS "main.c"
+                    PRIV_REQUIRES esp_wifi nvs_flash
+                    INCLUDE_DIRS ".")
