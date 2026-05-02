@@ -4,14 +4,7 @@
 #include "wifi_mod.hpp"
 #include "udp_server_mod.hpp"
 
-// Clear the LwIP definitions of these macros
-#undef _IO
-#undef _IOR
-#undef _IOW
-#undef _IOWR
-#include "video_mod.hpp"
-
-static const char *TAG = "main";
+static const char *TAG = "MAIN";
 
 extern "C" void app_main(void)
 {
@@ -39,48 +32,45 @@ extern "C" void app_main(void)
     WiFiManager::get_ip(ip_str, sizeof(ip_str));
     ESP_LOGI(TAG, "WiFi ready! IP: %s", ip_str);
 
-    UDPServer::start(3333);
+    // Configure video capture
+    V4L2H264Capture::Config capture_config;
+    capture_config.capture_device = "/dev/video0";
+    capture_config.width = 1280;
+    capture_config.height = 960;
+    capture_config.bitrate = 4000000;
+    capture_config.i_period = 30;
+    capture_config.verbose = true;
+
+    // Initialize capture (but don't start streaming yet)
+    V4L2H264Capture capture(capture_config);
+
+    // if (capture.start() != ESP_OK)
+    // {
+    //   ESP_LOGE("MAIN", "Failed to start capture");
+    //   return;
+    // }
+
+    // Configure UDP streamer
+    UDPH264Streamer::Config streamer_config;
+    streamer_config.data_port = 3333;
+    streamer_config.control_port = 3334;
+    streamer_config.verbose = true;
+
+    // Start streamer (waits for client commands)
+    if (UDPH264Streamer::start(&capture, streamer_config) != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to start streamer");
+      return;
+    }
+
+    ESP_LOGI(TAG, "System ready. Available commands:");
+    ESP_LOGI(TAG, "  Send 'start' to port %d to start streaming", streamer_config.control_port);
+    ESP_LOGI(TAG, "  Send 'stop' to port %d to stop streaming", streamer_config.control_port);
+    ESP_LOGI(TAG, "  Send 'status' to port %d to check status", streamer_config.control_port);
 
     ESP_LOGI(TAG, "Server ready");
     ESP_LOGI(TAG, "POST JSON to http://%s/command", ip_str);
   }
-  
-  V4L2H264Capture::Config config;
-  config.capture_device = "/dev/video0";
-  config.width = 1280;
-  config.height = 960;
-  config.bitrate = 4000000; // 4 Mbps
-  config.i_period = 30;
-  config.verbose = true;
-
-  V4L2H264Capture capture(config);
-
-  if (capture.init() != ESP_OK)
-  {
-    ESP_LOGE("MAIN", "Failed to init capture");
-    return;
-  }
-
-  if (capture.start() != ESP_OK)
-  {
-    ESP_LOGE("MAIN", "Failed to start capture");
-    return;
-  }
-
-  // Capture frames
-  for (int i = 0; i < 100000; i++)
-  {
-    size_t frame_size = 0;
-    uint8_t *frame_data = capture.captureFrame(frame_size);
-
-    if (frame_data && frame_size > 0)
-    {
-      ESP_LOGI("MAIN", "Frame %d: %zu bytes", i, frame_size);
-      // Process frame_data here...
-    }
-  }
-
-  capture.stop();
 
   while (true)
   {
