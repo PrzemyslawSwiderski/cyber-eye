@@ -25,8 +25,6 @@ private:
   static void data_task(void *pvParameters)
   {
     struct sockaddr_in dest_addr;
-    struct sockaddr_in source_addr;
-    socklen_t socklen = sizeof(source_addr);
 
     dest_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     dest_addr.sin_family = AF_INET;
@@ -221,53 +219,6 @@ public:
     ESP_LOGI(TAG, "UDP server started - Data port: %d, Control port: %d", data_port, control_port);
     return ESP_OK;
   }
-
-  static void stop()
-  {
-    is_running = false;
-    vTaskDelay(pdMS_TO_TICKS(100));
-
-    if (stream_mutex != NULL)
-    {
-      vSemaphoreDelete(stream_mutex);
-      stream_mutex = NULL;
-    }
-
-    ESP_LOGI(TAG, "UDP server stopped");
-  }
-
-  static void start_stream()
-  {
-    xSemaphoreTake(stream_mutex, portMAX_DELAY);
-    stream_active = true;
-    xSemaphoreGive(stream_mutex);
-    ESP_LOGI(TAG, "Stream started manually");
-  }
-
-  static void stop_stream()
-  {
-    xSemaphoreTake(stream_mutex, portMAX_DELAY);
-    stream_active = false;
-    xSemaphoreGive(stream_mutex);
-    ESP_LOGI(TAG, "Stream stopped manually");
-  }
-
-  static bool is_streaming()
-  {
-    bool active;
-    xSemaphoreTake(stream_mutex, portMAX_DELAY);
-    active = stream_active;
-    xSemaphoreGive(stream_mutex);
-    return active;
-  }
-
-  static uint32_t get_frame_count()
-  {
-    return 0;
-  }
-
-  static uint16_t get_data_port() { return data_port; }
-  static uint16_t get_control_port() { return control_port; }
 };
 
 const char *UDPServer::TAG = "udp_server";

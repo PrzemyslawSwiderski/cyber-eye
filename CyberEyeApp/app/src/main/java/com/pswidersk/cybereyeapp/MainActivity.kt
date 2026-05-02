@@ -31,12 +31,13 @@ import androidx.compose.ui.unit.sp
 import com.pswidersk.cybereyeapp.ui.theme.CyberEyeAppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
+import java.net.SocketTimeoutException
 
 class MainActivity : ComponentActivity() {
 
@@ -50,7 +51,12 @@ class MainActivity : ComponentActivity() {
 
     private var receivedTimestamp by mutableStateOf("Waiting...")
     private var isReceiving by mutableStateOf(false)
-    private var receivingJob: kotlinx.coroutines.Job? = null
+    private var receivingJob: Job? = null
+
+    private val socket = DatagramSocket(APP_SOCKET_PORT).apply {
+        reuseAddress = true
+        soTimeout = 2000
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,37 +85,31 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun stopReceiving() {
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             isReceiving = false
             receivedTimestamp = "Stopped"
-            receivingJob?.cancel()
-            withContext(Dispatchers.IO) {
-                sendUdpCommand("stop", CONTROL_PORT)
-            }
+            sendUdpCommand("stop", CONTROL_PORT)
         }
     }
 
     private suspend fun sendUdpCommand(command: String, port: Int) = withContext(Dispatchers.IO) {
         try {
             val address = InetSocketAddress(ESP32_IP, port)
-            val socket = DatagramSocket(APP_SOCKET_PORT)
+            socket.connect(address)
             val data = command.toByteArray()
-            val packet = DatagramPacket(data, data.size, address)
+            val packet = DatagramPacket(data, data.size)
             socket.send(packet)
 
             // Wait for acknowledgment
             val buffer = ByteArray(32)
             val receivePacket = DatagramPacket(buffer, buffer.size)
-            socket.soTimeout = 2000
             try {
                 socket.receive(receivePacket)
                 val response = String(receivePacket.data, 0, receivePacket.length)
                 Log.d(TAG, "Command '$command' response: $response")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Log.w(TAG, "No response for command: $command")
             }
-
-            socket.close()
             Log.d(TAG, "Sent UDP command: $command to port $port")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to send UDP command: ${e.message}")
@@ -117,9 +117,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun startUdpReceiving() = withContext(Dispatchers.IO) {
-        var socket: DatagramSocket? = null
         var lastUpdateTime = 0L
-        var latestTimestamp = ""
+        var latestTimestamp: String
 
         try {
             // Send start command via control port
@@ -128,8 +127,6 @@ class MainActivity : ComponentActivity() {
 
             // Create socket for receiving data
             val address = InetSocketAddress(ESP32_IP, DATA_PORT)
-            socket = DatagramSocket(APP_SOCKET_PORT)
-            socket.soTimeout = 2000
             socket.connect(address)
 
             val buffer = ByteArray(128)
@@ -158,7 +155,7 @@ class MainActivity : ComponentActivity() {
                         }
                         lastUpdateTime = currentTime
                     }
-                } catch (_: java.net.SocketTimeoutException) {
+                } catch (_: SocketTimeoutException) {
                     Log.e(TAG, "Receive timeout")
                 }
             }
@@ -168,7 +165,6 @@ class MainActivity : ComponentActivity() {
                 receivedTimestamp = "Error: ${e.message}"
             }
         } finally {
-            socket?.close()
             withContext(Dispatchers.Main) {
                 isReceiving = false
             }

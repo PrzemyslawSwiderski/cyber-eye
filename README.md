@@ -114,6 +114,22 @@ iperf -u -c <PC_IP_ADDRESS> -b 6M -l 1400 -i 1 -t 60
 iperf -u -c <PC_IP_ADDRESS> -b 10M -l 1400 -i 1 -t 60
 ```
 
+### UDP testing
+
+```
+# Start stream
+echo -n "start" | nc -u 192.168.1.17 3334
+
+# Stop stream
+echo -n "stop" | nc -u 192.168.1.17 3334
+
+# Status
+echo -n "status" | nc -u 192.168.1.17 3334
+
+nc -u 192.168.1.17 3333
+```
+
+
 ### Firefox flags for smooth video (`about:config` page)
 
 ```
