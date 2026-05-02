@@ -133,6 +133,62 @@ socat UDP-RECV:3333 STDOUT | ffplay -
 socat UDP-RECV:3333 STDOUT | ffplay -f h264 -
 ```
 
+RTP:
+```
+# Start the streamer on ESP32 (send 'start' command)
+echo "start" | nc -u 192.168.1.17 3334
+
+# Play with VLC (on Ubuntu/Linux)
+vlc udp://@:3333
+
+# Or from command line with network cache
+vlc udp://@:3333 --network-caching=300
+vlc rtp://@:3333 --network-caching=300
+
+# Or using ffplay
+ffplay udp://0.0.0.0:3333
+
+
+# Step 1: Check if data is arriving
+nc -ul 3333 -v
+
+# Step 2: Check if it's valid RTP
+ffprobe -v debug -i udp://@:3333
+ffprobe -v debug -i rtp://@:3333
+
+# Step 3: Try playing with minimal logging
+ffplay -loglevel debug -stats udp://@:3333 2>&1 | grep -E "(error|Error|frame|pts)"
+
+# Step 4: Check codec compatibility
+ffprobe -show_streams udp://@:3333 2>&1 | grep codec
+
+# Step 5: Force RTP depacketization
+ffplay -f rtp_mpegts udp://@:3333
+
+
+```
+
+```
+# Save raw UDP data to file
+timeout 10 nc -ul 3333 > received.h264
+
+# Check if file has data
+ls -lh received.h264
+
+# Analyze the file
+ffprobe received.h264
+hexdump -C received.h264 | head -20
+```
+
+### SDP PLAY
+```
+ffplay -fflags nobuffer \
+       -flags low_delay \
+       -framedrop \
+       -max_delay 500000 \
+       -protocol_whitelist "file,udp,rtp" \
+        stream.sdp
+```
 
 ### Firefox flags for smooth video (`about:config` page)
 

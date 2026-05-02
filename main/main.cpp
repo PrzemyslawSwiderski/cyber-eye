@@ -35,9 +35,12 @@ extern "C" void app_main(void)
     // Configure video capture
     V4L2H264Capture::Config capture_config;
     capture_config.capture_device = "/dev/video0";
-    capture_config.width = 1280;
-    capture_config.height = 960;
-    capture_config.bitrate = 4000000;
+    // capture_config.width = 1280;
+    // capture_config.height = 960;
+    capture_config.width = 800;
+    capture_config.height = 640;
+    capture_config.bitrate = 2000000;
+    // capture_config.bitrate = 4000000;
     capture_config.i_period = 30;
     capture_config.verbose = true;
 

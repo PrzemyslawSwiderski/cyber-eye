@@ -18,7 +18,7 @@
 #define H264_DEVICE_PATH "/dev/video11"
 #define BUFFER_COUNT 2
 // #define FRAME_TIMEOUT_MS 17 // ~60 FPS
-#define FRAME_TIMEOUT_MS 1000 // 1 second
+#define FRAME_TIMEOUT_MS 67 // 15 FPS second
 
 class V4L2H264Capture
 {
@@ -238,7 +238,7 @@ public:
     enc_cap_qbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     enc_cap_qbuf.memory = V4L2_MEMORY_MMAP;
     enc_cap_qbuf.index = 0;
-    
+
     if (ioctl(encoding_fd_, VIDIOC_QBUF, &enc_cap_qbuf) < 0)
     {
       ESP_LOGE(TAG, "Failed to requeue encoder capture buffer: %s", strerror(errno));
@@ -246,7 +246,7 @@ public:
 
     if (config_.verbose)
     {
-      ESP_LOGI(TAG, "Frame %u: %zu bytes", sequence, size);
+      ESP_LOGD(TAG, "Frame %u: %zu bytes", sequence, size);
     }
 
     return true;

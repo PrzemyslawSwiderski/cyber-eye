@@ -14,6 +14,7 @@
 #undef _IOW
 #undef _IOWR
 #include "video_mod.hpp"
+#include "rtp_packetizer_mod.hpp"
 
 class UDPH264Streamer
 {
@@ -44,8 +45,12 @@ public:
     capture_ = capture;
     config_ = config;
     is_running_ = true;
-    stream_active_ = false;
+    stream_active_ = true;
     memset(&client_addr_, 0, sizeof(client_addr_));
+
+    // Initialize RTP packetizer if enabled
+    rtp_packetizer_ = new RTPPacketizer(esp_random());
+    ESP_LOGI(TAG, "RTP packetizer enabled for VLC compatibility");
 
     // Create mutex
     stream_mutex_ = xSemaphoreCreateMutex();
@@ -97,6 +102,13 @@ public:
 
     is_running_ = false;
 
+    // Cleanup RTP packetizer
+    if (rtp_packetizer_)
+    {
+      delete rtp_packetizer_;
+      rtp_packetizer_ = nullptr;
+    }
+
     // Wait for tasks to finish
     if (data_task_handle_)
     {
@@ -126,12 +138,77 @@ private:
   static void sendFrame(int sock, const uint8_t *data, size_t size,
                         uint32_t sequence, struct sockaddr_in *client)
   {
+    std::vector<std::vector<uint8_t>> packets = rtp_packetizer_->packetize(data, size, sequence);
+
+    ESP_LOGD(TAG, "Frame %u: %zu -> %zu packets", sequence, size, packets.size());
+
+    int failed = 0;
+    int max_retries = 5;
+
+    for (size_t i = 0; i < packets.size(); i++)
+    {
+      const auto &packet = packets[i];
+      int sent = -1;
+      int retry = 0;
+
+      while (retry < max_retries && sent < 0)
+      {
+        sent = sendto(sock, packet.data(), packet.size(), 0,
+                      (struct sockaddr *)client, sizeof(*client));
+
+        if (sent < 0)
+        {
+          if (errno == ENOBUFS || errno == EAGAIN)
+          {
+            // Buffer full, wait longer for each retry
+            int delay_ms = 10 * (retry + 1);
+            ESP_LOGD(TAG, "Buffer full, retry %d/%d after %dms (packet %d/%zu)",
+                     retry + 1, max_retries, delay_ms, i + 1, packets.size());
+            vTaskDelay(pdMS_TO_TICKS(delay_ms));
+            retry++;
+          }
+          else
+          {
+            ESP_LOGE(TAG, "Send error (packet %d/%zu): errno=%d",
+                     i + 1, packets.size(), errno);
+            break;
+          }
+        }
+      }
+
+      if (sent < 0)
+      {
+        failed++;
+        if (failed > packets.size() / 4)
+        { // If >25% fail, abort
+          ESP_LOGE(TAG, "Too many failures (%d/%zu), aborting frame",
+                   failed, packets.size());
+          break;
+        }
+      }
+
+      // Small delay between packets to prevent flooding
+      if (i % 8 == 7)
+      {
+        vTaskDelay(pdMS_TO_TICKS(2));
+      }
+    }
+
+    if (failed > 0)
+    {
+      ESP_LOGW(TAG, "Frame %u had %d/%zu packet failures", sequence, failed, packets.size());
+    }
+  }
+
+  static void sendFrame2(int sock, const uint8_t *data, size_t size,
+                         uint32_t sequence, struct sockaddr_in *client)
+  {
     int sent = sendto(sock, data, size, 0,
                       (struct sockaddr *)client, sizeof(*client));
 
     if (sent < 0)
     {
-      ESP_LOGW(TAG, "Failed to send frame data");
+      ESP_LOGE(TAG, "Send error: %s", strerror(errno));
     }
     else
     {
@@ -141,18 +218,19 @@ private:
 
   static void dataTask(void *pvParameters)
   {
+    capture_->init();
+
     int sock = -1;
     int broadcast = 1;
     struct sockaddr_in broadcast_addr = {};
     broadcast_addr.sin_family = AF_INET;
-    broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST); // 255.255.255.255
+    broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
     broadcast_addr.sin_port = htons(config_.data_port);
 
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
     if (sock < 0)
     {
       ESP_LOGE(TAG, "Unable to create data socket");
-      goto cleanup;
     }
 
     if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast)) < 0)
@@ -161,6 +239,17 @@ private:
     }
 
     ESP_LOGI(TAG, "Data server broadcasting to port %d", config_.data_port);
+
+    // Reset RTP sequence when starting
+    if (rtp_packetizer_)
+    {
+      rtp_packetizer_->resetSequence();
+    }
+
+    if (capture_->start() != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to start video capture");
+    }
 
     while (is_running_)
     {
@@ -187,12 +276,11 @@ private:
       }
       else
       {
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        ESP_LOGI(TAG, "dataTask no work");
+        vTaskDelay(pdMS_TO_TICKS(100));
       }
     }
     ESP_LOGI(TAG, "dataTask closing...");
-  cleanup:
+
     if (sock >= 0)
     {
       close(sock);
@@ -203,8 +291,6 @@ private:
 
   static void controlTask(void *pvParameters)
   {
-    capture_->init();
-
     int sock = -1;
     struct sockaddr_in dest_addr = {};
     struct sockaddr_in source_addr = {};
@@ -243,15 +329,6 @@ private:
 
         if (strcmp(buffer, "start") == 0)
         {
-          if (capture_->start() != ESP_OK)
-          {
-            ESP_LOGE(TAG, "Failed to start video capture");
-            const char *ack = "error: capture failed";
-            sendto(sock, ack, strlen(ack), 0,
-                   (struct sockaddr *)&source_addr, sizeof(source_addr));
-            continue;
-          }
-
           client_addr_ = source_addr;
           xSemaphoreTake(stream_mutex_, pdMS_TO_TICKS(100));
           stream_active_ = true;
@@ -269,9 +346,6 @@ private:
           xSemaphoreTake(stream_mutex_, pdMS_TO_TICKS(100));
           stream_active_ = false;
           xSemaphoreGive(stream_mutex_);
-
-          // Stop video capture
-          // capture_->stop();
 
           ESP_LOGI(TAG, "STOP command from %s:%d - streaming stopped",
                    client_ip, ntohs(source_addr.sin_port));
@@ -339,6 +413,7 @@ private:
   static V4L2H264Capture *capture_;
   static Config config_;
   static SemaphoreHandle_t stream_mutex_;
+  static RTPPacketizer *rtp_packetizer_;
 };
 
 // Static member initialization
@@ -352,3 +427,4 @@ struct sockaddr_in UDPH264Streamer::client_addr_ = {};
 V4L2H264Capture *UDPH264Streamer::capture_ = nullptr;
 UDPH264Streamer::Config UDPH264Streamer::config_ = {};
 SemaphoreHandle_t UDPH264Streamer::stream_mutex_ = nullptr;
+RTPPacketizer *UDPH264Streamer::rtp_packetizer_ = nullptr;
