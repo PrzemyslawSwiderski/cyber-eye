@@ -10,6 +10,7 @@ extern "C" void app_main(void)
 {
   esp_log_level_set("DEV_FS_FAT_SUB_SDMMC", ESP_LOG_DEBUG);
   esp_log_level_set("esp_video_init", ESP_LOG_DEBUG);
+  esp_log_level_set("lwip", ESP_LOG_DEBUG);
 
   ESP_LOGI(TAG, "Starting Cyber Eye...");
 
@@ -35,29 +36,25 @@ extern "C" void app_main(void)
     // Configure video capture
     V4L2H264Capture::Config capture_config;
     capture_config.capture_device = "/dev/video0";
-    // capture_config.width = 1280;
-    // capture_config.height = 960;
-    capture_config.width = 800;
-    capture_config.height = 640;
-    capture_config.bitrate = 2000000;
-    // capture_config.bitrate = 4000000;
-    capture_config.i_period = 30;
-    capture_config.verbose = true;
+    // capture_config.bitrate = 2000000; // 2 Mbps
+    capture_config.bitrate = 1000000; // 1 Mbps
+    // capture_config.bitrate = 25000;
+    // capture_config.bitrate = 25000000;
+
+    // I-frame Interval (default: 12)
+    // capture_config.i_period = 30;
+    capture_config.i_period = 15;
+    // 0 to 51 (where 0 is near-perfect/lossless quality and 51 is the worst quality)
+    capture_config.min_qp = 35;
+    capture_config.max_qp = 35;
 
     // Initialize capture (but don't start streaming yet)
     V4L2H264Capture capture(capture_config);
 
-    // if (capture.start() != ESP_OK)
-    // {
-    //   ESP_LOGE("MAIN", "Failed to start capture");
-    //   return;
-    // }
-
     // Configure UDP streamer
     UDPH264Streamer::Config streamer_config;
-    streamer_config.data_port = 3333;
+    streamer_config.data_destination_port = 3333;
     streamer_config.control_port = 3334;
-    streamer_config.verbose = true;
 
     // Start streamer (waits for client commands)
     if (UDPH264Streamer::start(&capture, streamer_config) != ESP_OK)

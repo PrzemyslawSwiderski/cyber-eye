@@ -190,6 +190,66 @@ ffplay -fflags nobuffer \
         stream.sdp
 ```
 
+
+### Video Devices info
+
+```
+video:> v4l2-ctl -d /dev/video11 --all
+Driver Info:
+        Driver name      : H.264
+        Card type        : H.264
+        Bus info         : esp32p4:H.264
+        Driver version   : 2.1.0
+        Capabilities     : 0x84208000
+                Video M2M
+                Streaming
+                Extended Pix Format
+                Device Capabilities
+        Device Caps      : 0x4208000
+                Video M2M
+                Streaming
+                Extended Pix Format
+Format Video Capture:
+        Width/Height     : 64/64
+        Pixel Format     : H264
+
+Controls
+
+            H264 I-Frame Period 0x00990a66 (int)        : min=1 max=120 step=1 default=30
+          H264 Minimum QP Value 0x00990a61 (int)        : min=0 max=51 step=1 default=25
+          H264 Maximum QP Value 0x00990a62 (int)        : min=0 max=51 step=1 default=26
+                  Video Bitrate 0x009909cf (int)        : min=25000 max=25000000 step=25000 default=10000000
+
+Controls 2
+
+video:> v4l2-ctl -d /dev/video0 --all
+Driver Info:
+        Driver name      : MIPI-CSI
+        Card type        : MIPI-CSI
+        Bus info         : esp32p4:MIPI-CSI
+        Driver version   : 2.1.0
+        Capabilities     : 0x84200001
+                Video Capture
+                Streaming
+                Extended Pix Format
+                Device Capabilities
+        Device Caps      : 0x4200001
+                Video Capture
+                Streaming
+                Extended Pix Format
+Format Video Capture:
+        Width/Height     : 800/800
+        Pixel Format     : RGBP
+
+Controls
+
+                       Exposure 0x00980911 (int)        : min=2 max=235 step=1 default=80
+                  Vertical Flip 0x00980915 (int)        : min=0 max=1 step=1 default=0
+                Horizontal Flip 0x00980914 (int)        : min=0 max=1 step=1 default=0
+
+Controls 2
+```
+
 ### Firefox flags for smooth video (`about:config` page)
 
 ```
