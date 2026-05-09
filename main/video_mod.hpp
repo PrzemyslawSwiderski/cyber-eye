@@ -15,7 +15,6 @@
 #include <linux/videodev2.h>
 #include "esp_log.h"
 #include "esp_err.h"
-#include "cam_diag_mod.hpp"
 
 #define H264_DEVICE_PATH "/dev/video11"
 #define BUFFER_COUNT 5
@@ -264,7 +263,7 @@ private:
     set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP, config_.max_qp, "H264_MAX_QP");
 
     // Exposure 0x00980911 (int)        : min=2 max=235 step=1 default=80
-    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, 120, "V4L2_CID_EXPOSURE");
+    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, 90, "V4L2_CID_EXPOSURE");
     // Vertical Flip 0x00980915 (int)   : min=0 max=1 step=1 default=0
     set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_VFLIP, 1, "V4L2_CID_VFLIP");
     // Horizontal Flip 0x00980914 (int) : min=0 max=1 step=1 default=0

@@ -18,16 +18,19 @@
 #undef _IOWR
 #include "video_mod.hpp"
 #include "rtp_packetizer_mod.hpp"
+#include "cmd_process_mod.hpp"
 
 class UDPH264Streamer
 {
 public:
+  static constexpr int SEND_MAX_RETRIES = 5;
+
   struct Config
   {
-    uint16_t data_destination_port = 3333; // Port for video data
+    uint16_t data_destination_port = 59227; // Port for video data
     uint16_t control_port = 3334;          // Port for control commands
-    int task_priority = 7;                 // FreeRTOS task priority
-    int task_stack_size = 8192;            // Stack size in bytes
+    int task_priority = 20;                // FreeRTOS task priority
+    int task_stack_size = 8 * 1024;        // Stack size in bytes
   };
 
   static esp_err_t start(V4L2H264Capture *capture, const Config &config)
@@ -52,39 +55,35 @@ public:
     // Initialize RTP packetizer if enabled
     rtp_packetizer_ = new RTPPacketizer(esp_random());
 
-    // Create mutex
-    stream_mutex_ = xSemaphoreCreateMutex();
-    if (stream_mutex_ == NULL)
-    {
-      ESP_LOGE(TAG, "Failed to create mutex");
-      is_running_ = false;
-      return ESP_ERR_NO_MEM;
-    }
-
+    auto control_task_stack_size = 4 * 1024;
     // Start control task (handles start/stop/status commands)
-    BaseType_t ret = xTaskCreate(controlTask, "udp_control",
-                                 4096, nullptr, config_.task_priority + 1,
-                                 &control_task_handle_);
+    BaseType_t ret = xTaskCreatePinnedToCore(controlTask, "udp_control",
+                                             control_task_stack_size,
+                                             nullptr,
+                                             config_.task_priority + 1,
+                                             &control_task_handle_,
+                                             0);
 
     if (ret != pdPASS)
     {
       ESP_LOGE(TAG, "Failed to create control task");
       is_running_ = false;
-      vSemaphoreDelete(stream_mutex_);
       return ESP_FAIL;
     }
 
     // Start data task (sends video frames)
-    ret = xTaskCreate(dataTask, "udp_data",
-                      config_.task_stack_size, nullptr, config_.task_priority,
-                      &data_task_handle_);
+    ret = xTaskCreatePinnedToCore(dataTask, "udp_data",
+                                  config_.task_stack_size,
+                                  nullptr,
+                                  config_.task_priority,
+                                  &data_task_handle_,
+                                  1);
 
     if (ret != pdPASS)
     {
       ESP_LOGE(TAG, "Failed to create data task");
       is_running_ = false;
       vTaskDelete(control_task_handle_);
-      vSemaphoreDelete(stream_mutex_);
       return ESP_FAIL;
     }
 
@@ -121,12 +120,6 @@ public:
       control_task_handle_ = nullptr;
     }
 
-    if (stream_mutex_)
-    {
-      vSemaphoreDelete(stream_mutex_);
-      stream_mutex_ = nullptr;
-    }
-
     ESP_LOGI(TAG, "Streamer stopped");
   }
 
@@ -134,31 +127,40 @@ private:
   static void sendFrame(int sock, const uint8_t *data, size_t size, struct sockaddr_in *destination_addr)
   {
     // Packetize the frame
-    std::vector<std::vector<uint8_t>> packets = rtp_packetizer_->packetize(data, size);
-
-    // Calculate expected size per packet type
-    size_t total_packet_bytes = 0;
-    for (const auto &packet : packets)
-    {
-      total_packet_bytes += packet.size();
-    }
+    uint64_t ts_us = esp_timer_get_time();
+    std::vector<std::vector<uint8_t>> packets = rtp_packetizer_->packetize(data, size, ts_us);
 
     for (size_t i = 0; i < packets.size(); i++)
     {
       const auto &packet = packets[i];
       int sent = -1;
+      int retries = 0;
 
-      sent = sendto(sock, packet.data(), packet.size(), 0,
-                    (struct sockaddr *)destination_addr, sizeof(*destination_addr));
-
-      if (sent < 0)
+      while (retries <= SEND_MAX_RETRIES)
       {
-        ESP_LOGE(TAG, "Send error (packet %zu/%zu): %s (errno=%d)",
-                 i + 1, packets.size(), strerror(errno), errno);
-        break;
+        sent = sendto(sock, packet.data(), packet.size(), 0,
+                      (struct sockaddr *)destination_addr, sizeof(*destination_addr));
+
+        if (sent > 0)
+          break;
+
+        if (errno == ENOMEM || errno == ENOBUFS)
+        {
+          taskYIELD();
+          retries++;
+        }
+        else
+        {
+          ESP_LOGE(TAG, "Send error (packet %zu/%zu): errno=%d", i + 1, packets.size(), errno);
+          return;
+        }
       }
 
-      vTaskDelay(pdMS_TO_TICKS(5));
+      if (sent <= 0)
+      {
+        ESP_LOGE(TAG, "Dropped packet %zu/%zu after %d retries (pool exhausted)",
+                 i + 1, packets.size(), SEND_MAX_RETRIES);
+      }
     }
   }
 
@@ -198,13 +200,7 @@ private:
 
     while (is_running_)
     {
-      bool send_data = false;
-
-      xSemaphoreTake(stream_mutex_, pdMS_TO_TICKS(100));
-      send_data = stream_active_;
-      xSemaphoreGive(stream_mutex_);
-
-      if (send_data)
+      if (stream_active_.load())
       {
         uint8_t *frame_data = nullptr;
         size_t frame_size = 0;
@@ -282,69 +278,20 @@ private:
       if (len > 0)
       {
         buffer[len] = '\0';
-        char client_ip[16];
-        inet_ntoa_r(source_addr.sin_addr, client_ip, sizeof(client_ip));
 
-        if (strcmp(buffer, "start") == 0)
-        {
-          client_addr_ = source_addr;
-          // adjusting client port to fixed one
-          client_addr_.sin_port = htons(config_.data_destination_port);
+        char source_ip[16];
+        inet_ntoa_r(source_addr.sin_addr, source_ip, sizeof(source_ip));
+        ESP_LOGI(TAG, "Command \"%s\" from %s:%d", buffer, source_ip, ntohs(source_addr.sin_port));
 
-          xSemaphoreTake(stream_mutex_, portMAX_DELAY);
-          stream_active_ = true;
-          xSemaphoreGive(stream_mutex_);
+        // adjust client data channel to a last sender
+        client_addr_ = source_addr;
+        // client_addr_.sin_port = htons(config_.data_destination_port);
 
-          ESP_LOGI(TAG, "START command from %s:%d - streaming", client_ip, ntohs(source_addr.sin_port));
+        CmdProcessor::Context ctx{&stream_active_};
+        auto result = CmdProcessor::process(buffer, ctx);
 
-          const char *ack = "started";
-          sendto(sock, ack, strlen(ack), 0,
-                 (struct sockaddr *)&source_addr, sizeof(source_addr));
-        }
-        else if (strcmp(buffer, "stop") == 0)
-        {
-          xSemaphoreTake(stream_mutex_, portMAX_DELAY);
-          stream_active_ = false;
-          xSemaphoreGive(stream_mutex_);
-
-          ESP_LOGI(TAG, "STOP command from %s:%d - streaming stopped",
-                   client_ip, ntohs(source_addr.sin_port));
-
-          const char *ack = "stopped";
-          sendto(sock, ack, strlen(ack), 0,
-                 (struct sockaddr *)&source_addr, sizeof(source_addr));
-        }
-        else if (strcmp(buffer, "status") == 0)
-        {
-          char status[128];
-          xSemaphoreTake(stream_mutex_, portMAX_DELAY);
-
-          if (stream_active_)
-          {
-            snprintf(status, sizeof(status), "streaming");
-          }
-          else
-          {
-            snprintf(status, sizeof(status), "stopped");
-          }
-
-          xSemaphoreGive(stream_mutex_);
-
-          sendto(sock, status, strlen(status), 0,
-                 (struct sockaddr *)&source_addr, sizeof(source_addr));
-
-          ESP_LOGI(TAG, "STATUS query from %s:%d - %s",
-                   client_ip, ntohs(source_addr.sin_port), status);
-        }
-        else
-        {
-          ESP_LOGW(TAG, "Unknown command: %s from %s:%d",
-                   buffer, client_ip, ntohs(source_addr.sin_port));
-
-          const char *ack = "unknown command";
-          sendto(sock, ack, strlen(ack), 0,
-                 (struct sockaddr *)&source_addr, sizeof(source_addr));
-        }
+        sendto(sock, result.response, strlen(result.response), 0,
+               (struct sockaddr *)&source_addr, sizeof(source_addr));
       }
 
       vTaskDelay(pdMS_TO_TICKS(10));
@@ -362,7 +309,7 @@ private:
   static TaskHandle_t data_task_handle_;
   static TaskHandle_t control_task_handle_;
   static bool is_running_;
-  static bool stream_active_;
+  static std::atomic<bool> stream_active_;
   static struct sockaddr_in client_addr_;
   static V4L2H264Capture *capture_;
   static Config config_;
@@ -371,13 +318,13 @@ private:
 };
 
 // Static member initialization
+
+std::atomic<bool> UDPH264Streamer::stream_active_ = false;
 const char *UDPH264Streamer::TAG = "UDP_H264";
 TaskHandle_t UDPH264Streamer::data_task_handle_ = nullptr;
 TaskHandle_t UDPH264Streamer::control_task_handle_ = nullptr;
 bool UDPH264Streamer::is_running_ = false;
-bool UDPH264Streamer::stream_active_ = false;
 struct sockaddr_in UDPH264Streamer::client_addr_ = {};
 V4L2H264Capture *UDPH264Streamer::capture_ = nullptr;
 UDPH264Streamer::Config UDPH264Streamer::config_ = {};
-SemaphoreHandle_t UDPH264Streamer::stream_mutex_ = nullptr;
 RTPPacketizer *UDPH264Streamer::rtp_packetizer_ = nullptr;

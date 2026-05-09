@@ -136,7 +136,7 @@ socat UDP-RECV:3333 STDOUT | ffplay -f h264 -
 RTP:
 ```
 # Start the streamer on ESP32 (send 'start' command)
-echo "start" | nc -u 192.168.1.17 3334
+echo -n "start" | nc -u 192.168.1.17 3334
 
 # Play with VLC (on Ubuntu/Linux)
 vlc udp://@:3333
@@ -182,6 +182,9 @@ hexdump -C received.h264 | head -20
 
 ### SDP PLAY
 ```
+# start stream bind source to 3333
+echo -n "start" | nc -u -p 3333 192.168.1.17 3334
+
 ffplay -fflags nobuffer \
        -flags low_delay \
        -framedrop \

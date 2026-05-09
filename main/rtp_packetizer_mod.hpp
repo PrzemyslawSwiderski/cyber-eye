@@ -3,13 +3,14 @@
 #include <cstring>
 #include <cstdint>
 #include <vector>
-#include <chrono>
+#include <algorithm>
 #include <arpa/inet.h>
 
-#define RTP_VERSION 2
-#define RTP_PAYLOAD_TYPE_H264 96
-#define RTP_DEFAULT_MTU 1400
-#define RTP_H264_CLOCK_RATE 90000 // H.264 fixed clock rate
+static constexpr uint8_t RTP_VERSION = 2;
+static constexpr uint8_t RTP_PAYLOAD_H264 = 96;
+static constexpr uint16_t RTP_DEFAULT_MTU = 1400;
+static constexpr uint32_t RTP_CLOCK_RATE = 90000;
+static constexpr size_t RTP_HEADER_SIZE = 12;
 
 struct __attribute__((packed)) RTPHeader
 {
@@ -24,212 +25,144 @@ class RTPPacketizer
 {
 public:
   RTPPacketizer(uint32_t ssrc = 0x12345678, uint16_t mtu = RTP_DEFAULT_MTU)
-      : ssrc_(ssrc), sequence_number_(0), mtu_(mtu), max_payload_size_((mtu_ > 12) ? (mtu_ - 12) : 100), start_time_(std::chrono::steady_clock::now())
+      : ssrc_(ssrc), sequence_number_(0), timestamp_(0),
+        max_payload_size_(mtu > RTP_HEADER_SIZE ? mtu - RTP_HEADER_SIZE : 100)
   {
   }
 
-  // Main packetize method - timestamp automatically from system time
-  std::vector<std::vector<uint8_t>> packetize(const uint8_t *h264_data, size_t size)
+  // timestamp_us: monotonic capture timestamp in microseconds (e.g. from esp_timer_get_time())
+  std::vector<std::vector<uint8_t>> packetize(const uint8_t *data, size_t size, uint64_t timestamp_us)
   {
     std::vector<std::vector<uint8_t>> packets;
-
-    if (!h264_data || size == 0 || max_payload_size_ < 2)
-    {
+    if (!data || size == 0 || max_payload_size_ < 2)
       return packets;
-    }
 
-    // Update timestamp based on elapsed time
-    updateTimestamp();
+    uint32_t new_ts = static_cast<uint32_t>((timestamp_us * RTP_CLOCK_RATE) / 1000000ULL);
+    timestamp_ = (new_ts != timestamp_) ? new_ts : timestamp_ + 1;
 
-    // Extract and packetize NAL units
-    std::vector<NALUnit> nal_units;
-    if (extractNALUnits(h264_data, size, nal_units))
-    {
-      for (size_t i = 0; i < nal_units.size(); i++)
-      {
-        bool is_last_nal = (i == nal_units.size() - 1);
-
-        if (nal_units[i].data_size + 1 <= max_payload_size_)
-        {
-          createSingleNALPacket(nal_units[i], is_last_nal, packets);
-        }
-        else if (nal_units[i].data_size > 1)
-        {
-          createFragmentedPacket(nal_units[i], is_last_nal, packets);
-        }
-      }
-    }
-
+    packets.reserve(size / max_payload_size_ + 2);
+    processNALUnits(data, size, packets);
     return packets;
   }
 
   void resetSequence()
   {
     sequence_number_ = 0;
-    start_time_ = std::chrono::steady_clock::now();
     timestamp_ = 0;
   }
 
-
 private:
-  struct NALUnit
+  // Returns pointer to the first byte of the next start code and sets sc_len,
+  // or nullptr if none found in [p, end).
+  static const uint8_t *findStartCode(const uint8_t *p, const uint8_t *end, uint8_t &sc_len)
   {
-    const uint8_t *data;
-    size_t data_size;
-    uint8_t nal_header;
-    uint8_t nal_type;
-  };
-
-  void updateTimestamp()
-  {
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(now - start_time_).count();
-
-    // Convert microseconds to 90kHz clock
-    uint32_t new_timestamp = (elapsed_us * RTP_H264_CLOCK_RATE) / 1000000;
-
-    // Ensure timestamp always increases
-    if (new_timestamp > timestamp_)
+    while (p + 3 <= end)
     {
-      timestamp_ = new_timestamp;
+      p = static_cast<const uint8_t *>(memchr(p, 0x00, end - p));
+      if (!p || p + 3 > end)
+        return nullptr;
+
+      if (p[1] == 0x00 && p[2] == 0x01)
+      {
+        sc_len = 3;
+        return p;
+      }
+      if (p[1] == 0x00 && p[2] == 0x00 && p + 4 <= end && p[3] == 0x01)
+      {
+        sc_len = 4;
+        return p;
+      }
+      ++p;
     }
-    else if (new_timestamp == timestamp_)
+    return nullptr;
+  }
+
+  void processNALUnits(const uint8_t *data, size_t size, std::vector<std::vector<uint8_t>> &packets)
+  {
+    const uint8_t *end = data + size;
+    uint8_t sc_len = 0;
+
+    const uint8_t *sc = findStartCode(data, end, sc_len);
+    if (!sc)
+      return;
+
+    const uint8_t *nal = sc + sc_len;
+
+    while (nal < end)
     {
-      timestamp_++; // Prevent duplicate timestamps
+      const uint8_t *next_sc = findStartCode(nal + 1, end, sc_len);
+      const uint8_t *nal_end = next_sc ? next_sc : end; // last NAL reaches buffer end
+
+      size_t nal_size = nal_end - nal;
+      uint8_t nal_header = *nal;
+      uint8_t nal_type = nal_header & 0x1F;
+      bool is_last = (next_sc == nullptr);
+
+      if (nal_type >= 1 && nal_type <= 23 && nal_size > 0)
+      {
+        if (nal_size <= max_payload_size_)
+          packetizeSingle(nal, nal_size, is_last, packets);
+        else
+          packetizeFragmented(nal, nal_size, nal_header, is_last, packets);
+      }
+
+      if (!next_sc)
+        break;
+      nal = next_sc + sc_len;
     }
   }
 
-  bool extractNALUnits(const uint8_t *data, size_t size, std::vector<NALUnit> &nal_units)
+  void packetizeSingle(const uint8_t *data, size_t size, bool marker,
+                       std::vector<std::vector<uint8_t>> &packets)
   {
-    size_t pos = 0;
-
-    while (pos < size)
-    {
-      // Find start code (0x000001 or 0x00000001)
-      size_t start_code_pos = pos;
-      uint8_t start_code_len = 0;
-
-      while (start_code_pos < size - 2)
-      {
-        if (data[start_code_pos] == 0 && data[start_code_pos + 1] == 0)
-        {
-          if (start_code_pos + 2 < size && data[start_code_pos + 2] == 1)
-          {
-            start_code_len = 3;
-            break;
-          }
-          if (start_code_pos + 3 < size && data[start_code_pos + 2] == 0 &&
-              data[start_code_pos + 3] == 1)
-          {
-            start_code_len = 4;
-            break;
-          }
-        }
-        start_code_pos++;
-      }
-
-      if (start_code_len == 0)
-        break;
-
-      size_t nal_start = start_code_pos + start_code_len;
-      if (nal_start >= size)
-        break;
-
-      // Find next start code
-      size_t nal_end = nal_start;
-      while (nal_end < size - 2)
-      {
-        if (data[nal_end] == 0 && data[nal_end + 1] == 0)
-        {
-          if (nal_end + 2 < size && data[nal_end + 2] == 1)
-            break;
-          if (nal_end + 3 < size && data[nal_end + 2] == 0 && data[nal_end + 3] == 1)
-            break;
-        }
-        nal_end++;
-      }
-
-      size_t nal_size = nal_end - nal_start;
-      if (nal_size > 0)
-      {
-        NALUnit nal;
-        nal.data = data + nal_start;
-        nal.data_size = nal_size;
-        nal.nal_header = data[nal_start];
-        nal.nal_type = nal.nal_header & 0x1F;
-
-        // Only include valid NAL types (1-23 are video data)
-        if (nal.nal_type >= 1 && nal.nal_type <= 23)
-        {
-          nal_units.push_back(nal);
-        }
-      }
-
-      pos = nal_end;
-    }
-
-    return !nal_units.empty();
-  }
-
-  void createSingleNALPacket(const NALUnit &nal, bool is_last_nal,
-                             std::vector<std::vector<uint8_t>> &packets)
-  {
-    std::vector<uint8_t> packet(12 + nal.data_size);
-    setRTPHeader(packet.data(), is_last_nal);
-    memcpy(packet.data() + 12, nal.data, nal.data_size);
+    std::vector<uint8_t> packet(RTP_HEADER_SIZE + size);
+    writeRTPHeader(packet.data(), marker);
+    memcpy(packet.data() + RTP_HEADER_SIZE, data, size);
     packets.push_back(std::move(packet));
   }
 
-  void createFragmentedPacket(const NALUnit &nal, bool is_last_nal,
-                              std::vector<std::vector<uint8_t>> &packets)
+  void packetizeFragmented(const uint8_t *data, size_t size, uint8_t nal_header,
+                           bool is_last_nal, std::vector<std::vector<uint8_t>> &packets)
   {
-    size_t fu_payload_size = max_payload_size_ - 2;
-    if (fu_payload_size == 0)
-    {
-      createSingleNALPacket(nal, is_last_nal, packets);
-      return;
-    }
+    static constexpr size_t FU_OVERHEAD = 2; // FU indicator + FU header
 
-    const uint8_t *data = nal.data + 1;
-    size_t data_size = nal.data_size - 1;
-    size_t offset = 0;
+    const size_t fu_payload = max_payload_size_ - FU_OVERHEAD;
+    const uint8_t *payload = data + 1; // skip NAL header byte
+    size_t remaining = size - 1;
     bool first = true;
 
-    while (offset < data_size)
+    while (remaining > 0)
     {
-      size_t fragment_size = std::min(fu_payload_size, data_size - offset);
-      bool last_fragment = (offset + fragment_size >= data_size);
+      size_t chunk = std::min(fu_payload, remaining);
+      bool last_frag = (chunk >= remaining);
 
-      std::vector<uint8_t> packet(12 + 2 + fragment_size);
-      bool marker = last_fragment && is_last_nal;
-      setRTPHeader(packet.data(), marker);
+      std::vector<uint8_t> packet(RTP_HEADER_SIZE + FU_OVERHEAD + chunk);
+      writeRTPHeader(packet.data(), last_frag && is_last_nal);
 
-      // FU indicator + FU header
-      packet[12] = (nal.nal_header & 0xE0) | 28;
-      packet[13] = (first ? 0x80 : 0x00) | (last_fragment ? 0x40 : 0x00) | nal.nal_type;
+      packet[RTP_HEADER_SIZE] = (nal_header & 0xE0) | 28;
+      packet[RTP_HEADER_SIZE + 1] = (first ? 0x80 : 0x00) | (last_frag ? 0x40 : 0x00) | (nal_header & 0x1F);
 
-      memcpy(packet.data() + 14, data + offset, fragment_size);
+      memcpy(packet.data() + RTP_HEADER_SIZE + FU_OVERHEAD, payload, chunk);
       packets.push_back(std::move(packet));
 
-      offset += fragment_size;
+      payload += chunk;
+      remaining -= chunk;
       first = false;
     }
   }
 
-  void setRTPHeader(uint8_t *buffer, bool marker)
+  void writeRTPHeader(uint8_t *buf, bool marker)
   {
-    RTPHeader *header = (RTPHeader *)buffer;
-    header->version_padding_cc = (RTP_VERSION << 6);
-    header->marker_payload_type = (marker ? 0x80 : 0x00) | RTP_PAYLOAD_TYPE_H264;
-    header->sequence_number = htons(sequence_number_++);
-    header->timestamp = htonl(timestamp_);
-    header->ssrc = htonl(ssrc_);
+    auto *h = reinterpret_cast<RTPHeader *>(buf);
+    h->version_padding_cc = RTP_VERSION << 6;
+    h->marker_payload_type = (marker ? 0x80 : 0x00) | RTP_PAYLOAD_H264;
+    h->sequence_number = htons(sequence_number_++);
+    h->timestamp = htonl(timestamp_);
+    h->ssrc = htonl(ssrc_);
   }
 
   uint32_t ssrc_;
   uint16_t sequence_number_;
-  uint32_t timestamp_ = 0;
-  uint16_t mtu_;
+  uint32_t timestamp_;
   size_t max_payload_size_;
-  std::chrono::time_point<std::chrono::steady_clock> start_time_;
 };
