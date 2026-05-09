@@ -41,8 +41,9 @@ const static periph_i2s_config_t esp_bmgr_i2s_audio_out_cfg = {
             .clk_cfg = {
                 .sample_rate_hz = 48000,
                 .clk_src = I2S_CLK_SRC_DEFAULT,
-                .mclk_multiple = I2S_MCLK_MULTIPLE_256,
                 .ext_clk_freq_hz = 0,
+                .mclk_multiple = I2S_MCLK_MULTIPLE_256,
+                .bclk_div = 8,
             },
             .slot_cfg = {
                 .data_bit_width = I2S_DATA_BIT_WIDTH_16BIT,
@@ -82,8 +83,9 @@ const static periph_i2s_config_t esp_bmgr_i2s_audio_in_cfg = {
             .clk_cfg = {
                 .sample_rate_hz = 48000,
                 .clk_src = I2S_CLK_SRC_DEFAULT,
-                .mclk_multiple = I2S_MCLK_MULTIPLE_256,
                 .ext_clk_freq_hz = 0,
+                .mclk_multiple = I2S_MCLK_MULTIPLE_256,
+                .bclk_div = 8,
             },
             .slot_cfg = {
                 .data_bit_width = I2S_DATA_BIT_WIDTH_16BIT,

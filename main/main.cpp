@@ -1,87 +1,75 @@
-#include <chrono>
-#include "logger.hpp"
+#include "esp_log.h"
+#include "esp_board_manager_includes.h"
 
-#include "secrets.hpp"
-#include "ftp_mod.hpp"
 #include "wifi_mod.hpp"
-#include "music_player.hpp"
-#include "http_controller.hpp"
-#include "file_system.hpp"
+#include "udp_server_mod.hpp"
 #include "tasks_mod.hpp"
-#include "video_recorder.hpp"
 
-#include "esp_board_manager.h"
-#include "esp_gmf_app_setup_peripheral.h"
-#include "esp_gmf_app_sys.h"
-#include "esp_littlefs.h"
-#include "esp_netif.h"
+static const char *TAG = "MAIN";
 
-#include "driver/gpio.h"
-#include "driver/i2c_master.h"
-#include "esp_codec_dev.h"
-
-using namespace std::chrono_literals;
-
-// Global controller to keep it alive
-static std::unique_ptr<ctrl::HttpController> g_http_controller;
-
-extern "C" void app_main()
+extern "C" void app_main(void)
 {
-  espp::Logger logger({.tag = "MAIN", .level = espp::Logger::Verbosity::DEBUG});
-  logger.info("Bootup");
+  esp_log_level_set("DEV_FS_FAT_SUB_SDMMC", ESP_LOG_DEBUG);
+  esp_log_level_set("esp_video_init", ESP_LOG_DEBUG);
+  esp_log_level_set("lwip", ESP_LOG_DEBUG);
 
-  // Set the log level for the "SDIO_SLAVE" tag to VERBOSE
-  // esp_log_level_set("H_SDIO_DRV", ESP_LOG_VERBOSE);
-  // esp_log_level_set("H_SDIO_DRV", ESP_LOG_DEBUG);
-  // esp_log_level_set("sdio_diag", ESP_LOG_DEBUG);
-  // esp_log_level_set("lwip", ESP_LOG_DEBUG);
+  ESP_LOGI(TAG, "Starting Cyber Eye...");
 
-  // Initialize network interface
-  ESP_ERROR_CHECK(esp_netif_init());
-  // Create default event loop
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-  ESP_ERROR_CHECK(esp_board_manager_init());
-
-  // Create and initialize player
-  auto player = std::make_unique<audio::MusicPlayer>();
-  player->initialize();
-
-  // Initialize WiFi first
-  wifi::begin();
-
-  while (!wifi::is_connected())
+  // Initialize board manager, which will automatically initialize all peripherals and devices
+  ESP_LOGI(TAG, "Initializing board manager...");
+  int ret = esp_board_manager_init();
+  if (ret != ESP_OK)
   {
-    // waiting for the WIFI connection
-    vTaskDelay(pdMS_TO_TICKS(50));
+    ESP_LOGE(TAG, "Failed to initialize board manager");
+    return;
+  }
+  esp_board_manager_print_board_info();
+  esp_board_manager_print();
+
+  WiFiMode mode = WiFiMode::STA;
+
+  if (WiFiManager::init(mode) == ESP_OK)
+  {
+    char ip_str[16];
+    WiFiManager::get_ip(ip_str, sizeof(ip_str));
+    ESP_LOGI(TAG, "WiFi ready! IP: %s", ip_str);
+
+    // Configure video capture
+    V4L2H264Capture::Config capture_config;
+    capture_config.capture_device = "/dev/video0";
+    // capture_config.bitrate = 2000000; // 2 Mbps
+    capture_config.bitrate = 4000000; // 4 Mbps
+    // capture_config.bitrate = 25000;
+    // capture_config.bitrate = 25000000;
+
+    // I-frame Interval (default: 12)
+    capture_config.i_period = 15;
+    // capture_config.i_period = 15;
+    // 0 to 51 (where 0 is near-perfect/lossless quality and 51 is the worst quality)
+    auto quality = 45;
+    capture_config.min_qp = quality;
+    capture_config.max_qp = quality;
+
+    // Initialize capture (but don't start streaming yet)
+    V4L2H264Capture capture(capture_config);
+
+    // Configure UDP streamer
+    UDPH264Streamer::Config streamer_config = {};
+
+    // Start streamer (waits for client commands)
+    if (UDPH264Streamer::start(&capture, streamer_config) != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to start streamer");
+      return;
+    }
+
+    ESP_LOGI(TAG, "Cyber Eye ready");
   }
 
-  auto ip = wifi::get_ip();
-
-  // Start FTP server
-  ftp::start_server_task(ip);
-
-  ctrl::HttpController::Config http_config;
-  http_config.port = 8080;
-  http_config.bind_address = ip;
-
-  g_http_controller = std::make_unique<ctrl::HttpController>(player.get(), http_config);
-  g_http_controller->start_task();
-
-  // ctrl::VideoRecorder recorder;
-  // if (recorder.init() != ESP_OK)
-  // {
-  //   logger.error("Recorder init failed");
-  //   return;
-  // }
-
-  while (1)
+  while (true)
   {
-    // Log table to console
-    // Run for 6 seconds, logging FPS every 3 s, then print summary and exit
-    // recorder.start_benchmark(6);
-    // logger.info("Task list:\n{}", tasks::to_table());
-    // std::this_thread::sleep_for(5s);
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    // auto tasks_output = tasks::to_table();
+    // ESP_LOGI(TAG, "\n%s", tasks_output.c_str());
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }

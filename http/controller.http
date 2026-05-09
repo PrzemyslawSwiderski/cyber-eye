@@ -1,0 +1,20 @@
+### Sample status check
+curl -X POST http://192.168.1.17/command \
+-H "Content-Type: application/json" \
+-d '{"command":"status"}'
+
+
+### Start stream
+curl -X POST http://192.168.1.17/command \
+-H "Content-Type: application/json" \
+-d '{"command":"start"}'
+
+### Stop stream
+curl -X POST http://192.168.1.17/command \
+-H "Content-Type: application/json" \
+-d '{"command":"stop"}'
+
+### Unknown cmd
+curl -X POST http://192.168.1.17/command \
+-H "Content-Type: application/json" \
+-d '{"command":"ddsadsd"}'

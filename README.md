@@ -114,6 +114,145 @@ iperf -u -c <PC_IP_ADDRESS> -b 6M -l 1400 -i 1 -t 60
 iperf -u -c <PC_IP_ADDRESS> -b 10M -l 1400 -i 1 -t 60
 ```
 
+### UDP testing
+
+```
+# Start stream
+echo -n "start" | nc -u 192.168.1.17 3334
+
+# Stop stream
+echo -n "stop" | nc -u 192.168.1.17 3334
+
+# Status
+echo -n "status" | nc -u 192.168.1.17 3334
+
+nc -u 192.168.1.17 3333
+
+socat UDP-RECV:3333 STDOUT | ffplay -
+
+socat UDP-RECV:3333 STDOUT | ffplay -f h264 -
+```
+
+RTP:
+```
+# Start the streamer on ESP32 (send 'start' command)
+echo -n "start" | nc -u 192.168.1.17 3334
+
+# Play with VLC (on Ubuntu/Linux)
+vlc udp://@:3333
+
+# Or from command line with network cache
+vlc udp://@:3333 --network-caching=300
+vlc rtp://@:3333 --network-caching=300
+
+# Or using ffplay
+ffplay udp://0.0.0.0:3333
+
+
+# Step 1: Check if data is arriving
+nc -ul 3333 -v
+
+# Step 2: Check if it's valid RTP
+ffprobe -v debug -i udp://@:3333
+ffprobe -v debug -i rtp://@:3333
+
+# Step 3: Try playing with minimal logging
+ffplay -loglevel debug -stats udp://@:3333 2>&1 | grep -E "(error|Error|frame|pts)"
+
+# Step 4: Check codec compatibility
+ffprobe -show_streams udp://@:3333 2>&1 | grep codec
+
+# Step 5: Force RTP depacketization
+ffplay -f rtp_mpegts udp://@:3333
+
+
+```
+
+```
+# Save raw UDP data to file
+timeout 10 nc -ul 3333 > received.h264
+
+# Check if file has data
+ls -lh received.h264
+
+# Analyze the file
+ffprobe received.h264
+hexdump -C received.h264 | head -20
+```
+
+### SDP PLAY
+```
+# start stream bind source to 3333
+echo -n "start" | nc -u -p 3333 192.168.1.17 3334
+
+ffplay -fflags nobuffer \
+       -flags low_delay \
+       -framedrop \
+       -max_delay 500000 \
+       -protocol_whitelist "file,udp,rtp" \
+        stream.sdp
+```
+
+
+### Video Devices info
+
+```
+video:> v4l2-ctl -d /dev/video11 --all
+Driver Info:
+        Driver name      : H.264
+        Card type        : H.264
+        Bus info         : esp32p4:H.264
+        Driver version   : 2.1.0
+        Capabilities     : 0x84208000
+                Video M2M
+                Streaming
+                Extended Pix Format
+                Device Capabilities
+        Device Caps      : 0x4208000
+                Video M2M
+                Streaming
+                Extended Pix Format
+Format Video Capture:
+        Width/Height     : 64/64
+        Pixel Format     : H264
+
+Controls
+
+            H264 I-Frame Period 0x00990a66 (int)        : min=1 max=120 step=1 default=30
+          H264 Minimum QP Value 0x00990a61 (int)        : min=0 max=51 step=1 default=25
+          H264 Maximum QP Value 0x00990a62 (int)        : min=0 max=51 step=1 default=26
+                  Video Bitrate 0x009909cf (int)        : min=25000 max=25000000 step=25000 default=10000000
+
+Controls 2
+
+video:> v4l2-ctl -d /dev/video0 --all
+Driver Info:
+        Driver name      : MIPI-CSI
+        Card type        : MIPI-CSI
+        Bus info         : esp32p4:MIPI-CSI
+        Driver version   : 2.1.0
+        Capabilities     : 0x84200001
+                Video Capture
+                Streaming
+                Extended Pix Format
+                Device Capabilities
+        Device Caps      : 0x4200001
+                Video Capture
+                Streaming
+                Extended Pix Format
+Format Video Capture:
+        Width/Height     : 800/800
+        Pixel Format     : RGBP
+
+Controls
+
+                       Exposure 0x00980911 (int)        : min=2 max=235 step=1 default=80
+                  Vertical Flip 0x00980915 (int)        : min=0 max=1 step=1 default=0
+                Horizontal Flip 0x00980914 (int)        : min=0 max=1 step=1 default=0
+
+Controls 2
+```
+
 ### Firefox flags for smooth video (`about:config` page)
 
 ```

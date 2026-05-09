@@ -19,6 +19,7 @@ esp_board_device_handle_t g_esp_board_device_handles[] = {
     {
         .next = &g_esp_board_device_handles[1],
         .name = "audio_dac",
+        .chip = "es8311",
         .type = "audio_codec",
         .device_handle = NULL,
         .init = dev_audio_codec_init,
@@ -27,6 +28,7 @@ esp_board_device_handle_t g_esp_board_device_handles[] = {
     {
         .next = &g_esp_board_device_handles[2],
         .name = "audio_adc",
+        .chip = "es8311",
         .type = "audio_codec",
         .device_handle = NULL,
         .init = dev_audio_codec_init,
@@ -35,6 +37,7 @@ esp_board_device_handle_t g_esp_board_device_handles[] = {
     {
         .next = &g_esp_board_device_handles[3],
         .name = "fs_sdcard",
+        .chip = NULL,
         .type = "fs_fat",
         .device_handle = NULL,
         .init = dev_fs_fat_init,
@@ -43,6 +46,7 @@ esp_board_device_handle_t g_esp_board_device_handles[] = {
     {
         .next = NULL,
         .name = "camera",
+        .chip = NULL,
         .type = "camera",
         .device_handle = NULL,
         .init = dev_camera_init,
