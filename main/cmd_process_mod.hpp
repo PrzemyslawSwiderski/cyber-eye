@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cmath>
+#include <string>
 
 class CmdProcessor
 {
@@ -61,9 +62,65 @@ public:
                   : "{\"status\":\"stopped\"}"};
     }
 
+    if (strcmp(cmd, "wifi_ap") == 0)
+    {
+      bool ok = wifi::set_mode(wifi::Mode::AP);
+      if (ok)
+      {
+        return {"{\"status\":\"ap_mode\"}"};
+      }
+      else
+      {
+        return {"{\"error\":\"failed to switch to AP mode\"}"};
+      }
+    }
+
+    if (strncmp(cmd, "wifi_sta", 8) == 0)
+    {
+      // Parse SSID and password from command: "wifi_sta:::SSID:::PASSWORD"
+      const char *delim1 = strstr(cmd, ":::");
+      if (!delim1)
+      {
+        return {"{\"error\":\"wifi_sta requires SSID and password: wifi_sta:::SSID:::PASSWORD\"}"};
+      }
+
+      const char *ssid_start = delim1 + 3;
+      const char *delim2 = strstr(ssid_start, ":::");
+
+      std::string_view ssid_view, password_view;
+
+      if (delim2)
+      {
+        // Both SSID and password provided
+        ssid_view = std::string_view(ssid_start, delim2 - ssid_start);
+        password_view = std::string_view(delim2 + 3);
+      }
+      else
+      {
+        // Only SSID provided
+        ssid_view = std::string_view(ssid_start);
+        password_view = std::string_view("");
+      }
+
+      if (ssid_view.empty())
+      {
+        return {"{\"error\":\"SSID cannot be empty\"}"};
+      }
+
+      bool ok = wifi::set_mode(wifi::Mode::STA, {.ssid = ssid_view, .password = password_view});
+      if (ok)
+      {
+        return {"{\"status\":\"sta_mode\"}"};
+      }
+      else
+      {
+        return {"{\"error\":\"failed to switch to STA mode\"}"};
+      }
+    }
+
     if (strcmp(cmd, "stats") == 0)
     {
-      // Get current timestamp in microseconds for precise lag measurement
+      // Get ESP local time in microseconds since boot for lag measurement
       int64_t now_us = esp_timer_get_time();
 
       // Get temperature from the sensor
@@ -81,7 +138,7 @@ public:
       // Largest contiguous block (CRITICAL for video buffers!)
       size_t free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
 
-      // Format JSON response with microsecond timestamp
+      // Format JSON response with ESP local time in microseconds
       snprintf(stats_buffer_, sizeof(stats_buffer_),
                "{\"time\":%lld,\"temp\":%.2f,\"signal\":%d,\"free_heap\":%zu,\"free_block\":%zu}",
                now_us, temp, signal, free_mem, free_block);

@@ -278,7 +278,7 @@ private:
     }
 
     ESP_LOGI(TAG, "Control server bound to port %d", config_.control_port);
-    char buffer[32];
+    char buffer[256];
 
     while (is_running_)
     {
@@ -295,7 +295,6 @@ private:
 
         // adjust client data channel to a last sender
         client_addr_ = source_addr;
-        // client_addr_.sin_port = htons(config_.data_destination_port);
 
         if (cmd_processor_)
         {
