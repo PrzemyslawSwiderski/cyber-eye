@@ -7,8 +7,6 @@ import android.view.Surface
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
-private const val TAG = "H264Decoder"
-
 class H264Decoder(surface: Surface) {
     private val codec: MediaCodec
     private val nalQueue = LinkedBlockingQueue<ByteArray>(120)

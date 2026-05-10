@@ -10,15 +10,10 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
 
-class MainViewModel : ViewModel() {
-
-    companion object {
-        private const val TAG = "CyberEye"
-        const val ESP32_IP = "192.168.1.17"
-        const val CONTROL_PORT = 3334
-    }
+class VideoViewModel : ViewModel() {
 
     private lateinit var socket: DatagramSocket
+
     lateinit var rtpReceiver: RtpReceiver
         private set
 
@@ -30,9 +25,7 @@ class MainViewModel : ViewModel() {
                     socket = DatagramSocket(null).apply {
                         reuseAddress = true
                         soTimeout = 2000
-                        bind(InetSocketAddress(59000))
                     }
-                    Log.d(TAG, "Socket bound to port 59000")
                 }
                 if (!::rtpReceiver.isInitialized) {
                     rtpReceiver = RtpReceiver(socket)

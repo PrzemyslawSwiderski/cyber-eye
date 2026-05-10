@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+
+# Remove all Log.d (Debug) and Log.v (Verbose) calls
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}
