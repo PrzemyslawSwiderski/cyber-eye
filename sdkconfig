@@ -1802,6 +1802,14 @@ CONFIG_SPI_SLAVE_ISR_IN_IRAM=y
 # end of ESP-Driver:SPI Configurations
 
 #
+# ESP-Driver:Temperature Sensor Configurations
+#
+CONFIG_TEMP_SENSOR_ENABLE_DEBUG_LOG=y
+# default:
+# CONFIG_TEMP_SENSOR_ISR_IRAM_SAFE is not set
+# end of ESP-Driver:Temperature Sensor Configurations
+
+#
 # ESP-Driver:UART Configurations
 #
 # default:

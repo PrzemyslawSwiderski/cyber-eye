@@ -126,6 +126,9 @@ echo -n "stop" | nc -u 192.168.1.17 3334
 # Status
 echo -n "status" | nc -u 192.168.1.17 3334
 
+# Stats
+echo -n "stats" | nc -u 192.168.1.17 3334
+
 nc -u 192.168.1.17 3333
 
 socat UDP-RECV:3333 STDOUT | ffplay -

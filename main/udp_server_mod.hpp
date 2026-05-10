@@ -28,9 +28,9 @@ public:
   struct Config
   {
     uint16_t data_destination_port = 59227; // Port for video data
-    uint16_t control_port = 3334;          // Port for control commands
-    int task_priority = 20;                // FreeRTOS task priority
-    int task_stack_size = 8 * 1024;        // Stack size in bytes
+    uint16_t control_port = 3334;           // Port for control commands
+    int task_priority = 20;                 // FreeRTOS task priority
+    int task_stack_size = 8 * 1024;         // Stack size in bytes
   };
 
   static esp_err_t start(V4L2H264Capture *capture, const Config &config)
@@ -51,6 +51,9 @@ public:
     config_ = config;
     is_running_ = true;
     memset(&client_addr_, 0, sizeof(client_addr_));
+
+    // Initialize command processor
+    cmd_processor_ = new CmdProcessor();
 
     // Initialize RTP packetizer if enabled
     rtp_packetizer_ = new RTPPacketizer(esp_random());
@@ -99,6 +102,13 @@ public:
     }
 
     is_running_ = false;
+
+    // Cleanup command processor
+    if (cmd_processor_)
+    {
+      delete cmd_processor_;
+      cmd_processor_ = nullptr;
+    }
 
     // Cleanup RTP packetizer
     if (rtp_packetizer_)
@@ -287,11 +297,14 @@ private:
         client_addr_ = source_addr;
         // client_addr_.sin_port = htons(config_.data_destination_port);
 
-        CmdProcessor::Context ctx{&stream_active_};
-        auto result = CmdProcessor::process(buffer, ctx);
+        if (cmd_processor_)
+        {
+          CmdProcessor::Context ctx{&stream_active_};
+          auto result = cmd_processor_->process(buffer, ctx);
 
-        sendto(sock, result.response, strlen(result.response), 0,
-               (struct sockaddr *)&source_addr, sizeof(source_addr));
+          sendto(sock, result.response, strlen(result.response), 0,
+                 (struct sockaddr *)&source_addr, sizeof(source_addr));
+        }
       }
 
       vTaskDelay(pdMS_TO_TICKS(10));
@@ -314,6 +327,7 @@ private:
   static V4L2H264Capture *capture_;
   static Config config_;
   static SemaphoreHandle_t stream_mutex_;
+  static CmdProcessor *cmd_processor_;
   static RTPPacketizer *rtp_packetizer_;
 };
 
@@ -327,4 +341,5 @@ bool UDPH264Streamer::is_running_ = false;
 struct sockaddr_in UDPH264Streamer::client_addr_ = {};
 V4L2H264Capture *UDPH264Streamer::capture_ = nullptr;
 UDPH264Streamer::Config UDPH264Streamer::config_ = {};
+CmdProcessor *UDPH264Streamer::cmd_processor_ = nullptr;
 RTPPacketizer *UDPH264Streamer::rtp_packetizer_ = nullptr;
