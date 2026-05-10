@@ -7,10 +7,9 @@ import androidx.compose.ui.unit.sp
 object VideoOverlayTheme {
 
     object Fonts {
-        val labelSize: TextUnit = 11.sp   // dim labels (FPS, Loss…)
-        val valueSize: TextUnit = 13.sp   // monospace readouts
-        val titleSize: TextUnit = 13.sp   // panel headers
-        val metaSize: TextUnit = 10.sp   // secondary info (IP, quality hint)
+        val titleSize: TextUnit = 15.sp   // panel headers
+        val labelSize: TextUnit = 14.sp   // dim labels (FPS, Loss…)
+        val valueSize: TextUnit = 12.sp   // monospace readouts
 
     }
 

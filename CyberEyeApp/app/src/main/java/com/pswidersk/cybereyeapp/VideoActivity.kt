@@ -1,5 +1,7 @@
 package com.pswidersk.cybereyeapp
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
 import android.view.SurfaceHolder
@@ -12,16 +14,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
+import com.pswidersk.cybereyeapp.h264.H264Decoder
 import com.pswidersk.cybereyeapp.ui.screens.VideoScreen
 import com.pswidersk.cybereyeapp.ui.theme.CyberEyeAppTheme
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+
 
 class VideoActivity : ComponentActivity() {
 
@@ -35,13 +38,13 @@ class VideoActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
         enableEdgeToEdge()
         viewModel.initCommunication()
 
         setContent {
             CyberEyeAppTheme {
                 Box(modifier = Modifier.fillMaxSize()) {
-
                     AndroidView(
                         factory = { ctx ->
                             SurfaceView(ctx).apply {

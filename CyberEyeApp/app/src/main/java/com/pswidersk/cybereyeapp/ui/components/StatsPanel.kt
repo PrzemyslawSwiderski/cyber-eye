@@ -19,18 +19,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.pswidersk.cybereyeapp.AppState
-
-data class VideoStats(
-    val status: String,
-    val isReceiving: Boolean,
-    val fps: Float,
-    val frameCount: Int,
-    val bitrate: Float = 0f,
-    val packetLoss: Float = 0f,
-    val esp32Ip: String
-)
+import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Colors.background
+import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.labelSize
+import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.valueSize
 
 @Composable
 fun StatsPanel() {
@@ -40,7 +32,7 @@ fun StatsPanel() {
         modifier = Modifier
             .width(200.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(background)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -76,12 +68,12 @@ private fun StatRow(label: String, value: String, color: Color) {
     ) {
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = labelSize,
             color = Color.White.copy(alpha = 0.6f)
         )
         Text(
             text = value,
-            fontSize = 13.sp,
+            fontSize = valueSize,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
             color = color

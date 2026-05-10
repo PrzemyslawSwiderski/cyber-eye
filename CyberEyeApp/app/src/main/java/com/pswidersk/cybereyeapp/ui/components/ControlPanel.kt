@@ -34,11 +34,11 @@ fun ControlPanel(
 ) {
     Column(
         modifier = Modifier
-            .width(500.dp)
+            .width(700.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(background)
             .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         OverlayHeader()
 
@@ -57,8 +57,8 @@ fun ControlPanel(
             onValueChange = onQualityChange,
             valueRange = 0.0f..1.0f
         )
-
         QualityLevelIndicator(quality = quality)
+
     }
 }
 

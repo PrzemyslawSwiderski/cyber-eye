@@ -3,6 +3,8 @@ package com.pswidersk.cybereyeapp
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pswidersk.cybereyeapp.AppState.cameraIp
+import com.pswidersk.cybereyeapp.h264.RtpReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,7 +39,7 @@ class VideoViewModel : ViewModel() {
     }
 
     suspend fun sendUdpCommand(command: String): Boolean = withContext(Dispatchers.IO) {
-        val addr = InetSocketAddress(ESP32_IP, CONTROL_PORT)
+        val addr = InetSocketAddress(cameraIp.value, CONTROL_PORT)
         val data = command.toByteArray()
 
         try {

@@ -1,9 +1,10 @@
-package com.pswidersk.cybereyeapp
+package com.pswidersk.cybereyeapp.h264
 
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.util.Log
 import android.view.Surface
+import com.pswidersk.cybereyeapp.TAG
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 

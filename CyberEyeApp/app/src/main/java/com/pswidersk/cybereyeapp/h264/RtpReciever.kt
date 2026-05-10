@@ -1,6 +1,9 @@
-package com.pswidersk.cybereyeapp
+package com.pswidersk.cybereyeapp.h264
 
 import android.util.Log
+import com.pswidersk.cybereyeapp.AppState
+import com.pswidersk.cybereyeapp.TAG
+import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
@@ -18,7 +21,7 @@ class RtpReceiver(
 ) {
 
     private var running = false
-    private val fragmentBuffer = java.io.ByteArrayOutputStream()
+    private val fragmentBuffer = ByteArrayOutputStream()
     private var fuStarted = false
 
     // Sequence tracking
