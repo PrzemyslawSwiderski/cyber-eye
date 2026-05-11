@@ -194,6 +194,10 @@ ffplay -fflags nobuffer \
        -max_delay 500000 \
        -protocol_whitelist "file,udp,rtp" \
         stream.sdp
+
+# change quality
+echo -n "quality:30" | nc -u 192.168.1.17 3334
+echo -n "quality:51" | nc -u 192.168.1.17 3334
 ```
 
 

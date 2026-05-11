@@ -94,6 +94,14 @@ public:
     return ESP_OK;
   }
 
+  static void set_video_quality(int qp)
+  {
+    if (capture_)
+    {
+      capture_->set_quality(qp);
+    }
+  }
+
   static void stop()
   {
     if (!is_running_)
@@ -295,12 +303,18 @@ private:
 
         if (cmd_processor_)
         {
-          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr};
+          std::function<void()> deferred_action;
+          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, &UDPH264Streamer::set_video_quality, &deferred_action};
           auto result = cmd_processor_->process(buffer, ctx);
           ESP_LOGI(TAG, "Control response: %s", result.response);
 
           sendto(sock, result.response, strlen(result.response), 0,
                  (struct sockaddr *)&source_addr, sizeof(source_addr));
+
+          if (deferred_action)
+          {
+            deferred_action();
+          }
         }
       }
 

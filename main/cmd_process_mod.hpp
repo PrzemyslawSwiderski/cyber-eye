@@ -8,7 +8,11 @@
 #include "wifi_mod.hpp"
 #include <atomic>
 #include <cstdlib>
+#include <functional>
 #include <limits>
+#include <memory>
+#include <string>
+#include <string_view>
 #include <cmath>
 
 class CmdProcessor
@@ -19,6 +23,8 @@ public:
     std::atomic<bool> *stream_active;
     struct sockaddr_in *video_client_addr;
     struct sockaddr_in *source_addr;
+    void (*set_quality)(int);
+    std::function<void()> *deferred_action;
   };
 
   struct Result
@@ -44,35 +50,63 @@ public:
   {
     if (strcmp(cmd, "start") == 0)
     {
-      *ctx.video_client_addr = *ctx.source_addr;
-      ctx.stream_active->store(true);
+      *ctx.deferred_action = [ctx]()
+      {
+        *ctx.video_client_addr = *ctx.source_addr;
+        ctx.stream_active->store(true);
+      };
       return {"{\"status\":\"ok\"}"};
     }
 
     if (strcmp(cmd, "stop") == 0)
     {
-      ctx.stream_active->store(false);
+      *ctx.deferred_action = [ctx]()
+      {
+        ctx.stream_active->store(false);
+      };
       return {"{\"status\":\"ok\"}"};
+    }
+
+    if (strncmp(cmd, "quality:", 8) == 0)
+    {
+      int value = atoi(cmd + 8);
+      if (value >= 0 && value <= 51)
+      {
+        *ctx.deferred_action = [ctx, value]()
+        {
+          ctx.set_quality(value);
+        };
+        return {"{\"status\":\"ok\"}"};
+      }
+      else
+      {
+        return {"{\"error\":\"quality must be 0-51\"}"};
+      }
+    }
+
+    if (strcmp(cmd, "reboot") == 0)
+    {
+      *ctx.deferred_action = []()
+      {
+        esp_restart();
+      };
+      return {"{\"status\":\"rebooting\"}"};
     }
 
     if (strcmp(cmd, "status") == 0)
     {
       return {ctx.stream_active->load()
                   ? "{\"status\":\"streaming\"}"
-                  : "{\"status\":\"stopped\"}"};
+                  : "{\"status\":\"ready\"}"};
     }
 
     if (strcmp(cmd, "wifi_ap") == 0)
     {
-      bool ok = wifi::set_mode(wifi::Mode::AP);
-      if (ok)
+      *ctx.deferred_action = []()
       {
-        return {"{\"status\":\"ok\"}"};
-      }
-      else
-      {
-        return {"{\"error\":\"failed to switch to AP mode\"}"};
-      }
+        wifi::set_mode(wifi::Mode::AP);
+      };
+      return {"{\"status\":\"ok\"}"};
     }
 
     if (strncmp(cmd, "wifi_sta", 8) == 0)
@@ -107,15 +141,13 @@ public:
         return {"{\"error\":\"SSID cannot be empty\"}"};
       }
 
-      bool ok = wifi::set_mode(wifi::Mode::STA, {.ssid = ssid_view, .password = password_view});
-      if (ok)
+      std::string ssid(ssid_view);
+      std::string password(password_view);
+      *ctx.deferred_action = [ssid = std::move(ssid), password = std::move(password)]()
       {
-        return {"{\"status\":\"ok\"}"};
-      }
-      else
-      {
-        return {"{\"error\":\"failed to switch to STA mode\"}"};
-      }
+        wifi::set_mode(wifi::Mode::STA, {.ssid = ssid, .password = password});
+      };
+      return {"{\"status\":\"ok\"}"};
     }
 
     if (strcmp(cmd, "stats") == 0)

@@ -48,9 +48,7 @@ extern "C" void app_main(void)
   capture_config.i_period = 15;
   // capture_config.i_period = 15;
   // 0 to 51 (where 0 is near-perfect/lossless quality and 51 is the worst quality)
-  auto quality = 45;
-  capture_config.min_qp = quality;
-  capture_config.max_qp = quality;
+  capture_config.quality = 45;
 
   // Initialize capture (but don't start streaming yet)
   V4L2H264Capture capture(capture_config);

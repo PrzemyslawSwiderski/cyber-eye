@@ -29,8 +29,7 @@ public:
     const char *capture_device = "/dev/video0";
     int bitrate = 2000000; // 2 Mbps (reduced from 4)
     int i_period = 30;     // I-frame every 30 frames
-    int min_qp = 20;       // Increased for smaller frames
-    int max_qp = 40;
+    int quality = 30;      // QP value for quality (0-51)
   };
 
   explicit V4L2H264Capture(const Config &config)
@@ -138,19 +137,97 @@ public:
     ESP_LOGI(TAG, "Streaming stopped");
   }
 
+  void set_quality(int qp)
+  {
+    if (qp < 0 || qp > 51)
+    {
+      ESP_LOGW(TAG, "Invalid QP value: %d, must be 0-51", qp);
+      return;
+    }
+    std::lock_guard<std::mutex> lock(encoder_mutex_);
+
+    config_.quality = qp;
+
+    if (set_qp_during_stream(qp) == ESP_OK)
+      ESP_LOGI(TAG, "Video quality set to QP %d", qp);
+    else
+      ESP_LOGE(TAG, "Failed to set video quality to QP %d", qp);
+  }
+
+  esp_err_t set_qp_during_stream(int qp)
+  {
+    // Stop both stream types
+    int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type) != 0)
+    {
+      ESP_LOGW(TAG, "failed to stop capture stream: %s", strerror(errno));
+      return ESP_FAIL;
+    }
+    type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+    if (ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type) != 0)
+    {
+      ESP_LOGW(TAG, "failed to stop output stream: %s", strerror(errno));
+      return ESP_FAIL;
+    }
+
+    // Set MIN and MAX QP atomically in a single ioctl — no invalid intermediate state
+    struct v4l2_ext_control controls_arr[2] = {};
+    controls_arr[0].id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP;
+    controls_arr[0].value = qp;
+    controls_arr[1].id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP;
+    controls_arr[1].value = qp;
+
+    struct v4l2_ext_controls ext_ctrls = {};
+    ext_ctrls.ctrl_class = V4L2_CID_CODEC_CLASS;
+    ext_ctrls.count = 2;
+    ext_ctrls.controls = controls_arr;
+
+    if (ioctl(encoding_fd_, VIDIOC_S_EXT_CTRLS, &ext_ctrls) != 0)
+    {
+      ESP_LOGW(TAG, "failed to set QP controls: %s", strerror(errno));
+      // still try to restart even on failure
+    }
+    else
+    {
+      ESP_LOGI(TAG, "setting control: H264_MIN_QP and H264_MAX_QP, to: %d", qp);
+    }
+
+    // Re-queue encoder capture buffer (STREAMOFF dequeues everything)
+    struct v4l2_buffer enc_cap_qbuf = {};
+    enc_cap_qbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    enc_cap_qbuf.memory = V4L2_MEMORY_MMAP;
+    enc_cap_qbuf.index = 0;
+    if (ioctl(encoding_fd_, VIDIOC_QBUF, &enc_cap_qbuf) < 0)
+      ESP_LOGW(TAG, "failed to requeue encoder capture buffer: %s", strerror(errno));
+
+    // Restart both stream types
+    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (ioctl(encoding_fd_, VIDIOC_STREAMON, &type) != 0)
+    {
+      ESP_LOGW(TAG, "failed to restart capture stream: %s", strerror(errno));
+      return ESP_FAIL;
+    }
+    type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+    if (ioctl(encoding_fd_, VIDIOC_STREAMON, &type) != 0)
+    {
+      ESP_LOGW(TAG, "failed to restart output stream: %s", strerror(errno));
+      return ESP_FAIL;
+    }
+
+    return ESP_OK;
+  }
+
   bool captureFrame(uint8_t *&data, size_t &size, uint32_t &sequence)
   {
+    std::lock_guard<std::mutex> lock(encoder_mutex_); // guard encoder access
+
     struct v4l2_buffer cap_buf = {};
     cap_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     cap_buf.memory = V4L2_MEMORY_MMAP;
 
-    // Get frame from camera
     if (!dequeueBuffer(capture_fd_, &cap_buf, FRAME_TIMEOUT_MS))
-    {
       return false;
-    }
 
-    // Send to encoder
     struct v4l2_buffer enc_out_buf = {};
     enc_out_buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     enc_out_buf.memory = V4L2_MEMORY_USERPTR;
@@ -163,7 +240,6 @@ public:
       return false;
     }
 
-    // Get encoded frame
     struct v4l2_buffer enc_cap_buf = {};
     enc_cap_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     enc_cap_buf.memory = V4L2_MEMORY_MMAP;
@@ -174,42 +250,29 @@ public:
       return false;
     }
 
-    // Send camera buffer back to queue
     if (ioctl(capture_fd_, VIDIOC_QBUF, &cap_buf) < 0)
-    {
       ESP_LOGE(TAG, "Failed to requeue camera buffer: %s", strerror(errno));
-    }
 
-    // Dequeue output buffer from encoder
     struct v4l2_buffer enc_out_debuf = {};
     enc_out_debuf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     enc_out_debuf.memory = V4L2_MEMORY_USERPTR;
     if (ioctl(encoding_fd_, VIDIOC_DQBUF, &enc_out_debuf) < 0)
-    {
       ESP_LOGE(TAG, "Failed to dequeue encoder output buffer: %s", strerror(errno));
-    }
 
-    // Return frame data
     data = enc_buffer_;
     size = enc_cap_buf.bytesused;
     sequence = enc_cap_buf.sequence;
 
-    // Requeue encoder capture buffer
     struct v4l2_buffer enc_cap_qbuf = {};
     enc_cap_qbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     enc_cap_qbuf.memory = V4L2_MEMORY_MMAP;
     enc_cap_qbuf.index = 0;
     if (ioctl(encoding_fd_, VIDIOC_QBUF, &enc_cap_qbuf) < 0)
-    {
       ESP_LOGE(TAG, "Failed to requeue encoder capture buffer: %s", strerror(errno));
-    }
 
-    // Log frame info periodically
     static int frame_count = 0;
     if (++frame_count % 30 == 0)
-    {
       ESP_LOGI(TAG, "Frame %u: %zu bytes (%.1f KB)", sequence, size, size / 1024.0);
-    }
 
     return true;
   }
@@ -258,9 +321,9 @@ private:
     // Video Bitrate 0x009909cf (int)                : min=25000 max=25000000 step=25000 default=10000000
     set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_BITRATE, config_.bitrate, "BITRATE");
     // H264 Minimum QP Value 0x00990a61 (int)        : min=0 max=51 step=1 default=25
-    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MIN_QP, config_.min_qp, "H264_MIN_QP");
+    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MIN_QP, config_.quality, "H264_MIN_QP");
     // H264 Maximum QP Value 0x00990a62 (int)        : min=0 max=51 step=1 default=26
-    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP, config_.max_qp, "H264_MAX_QP");
+    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP, config_.quality, "H264_MAX_QP");
 
     // Exposure 0x00980911 (int)        : min=2 max=235 step=1 default=80
     set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, 90, "V4L2_CID_EXPOSURE");
@@ -491,6 +554,7 @@ private:
     }
   }
 
+  std::mutex encoder_mutex_;
   Config config_;
   int width;
   int height;
