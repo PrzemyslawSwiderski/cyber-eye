@@ -46,13 +46,13 @@ public:
     if (strcmp(cmd, "start") == 0)
     {
       ctx.stream_active->store(true);
-      return {"{\"status\":\"started\"}"};
+      return {"{\"status\":\"ok\"}"};
     }
 
     if (strcmp(cmd, "stop") == 0)
     {
       ctx.stream_active->store(false);
-      return {"{\"status\":\"stopped\"}"};
+      return {"{\"status\":\"ok\"}"};
     }
 
     if (strcmp(cmd, "status") == 0)
@@ -67,7 +67,7 @@ public:
       bool ok = wifi::set_mode(wifi::Mode::AP);
       if (ok)
       {
-        return {"{\"status\":\"ap_mode\"}"};
+        return {"{\"status\":\"ok\"}"};
       }
       else
       {
@@ -110,7 +110,7 @@ public:
       bool ok = wifi::set_mode(wifi::Mode::STA, {.ssid = ssid_view, .password = password_view});
       if (ok)
       {
-        return {"{\"status\":\"sta_mode\"}"};
+        return {"{\"status\":\"ok\"}"};
       }
       else
       {

@@ -1,6 +1,5 @@
 package com.pswidersk.cybereyeapp
 
-import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
@@ -94,9 +93,11 @@ class VideoActivity : ComponentActivity() {
         if (isReceiving) return
         isReceiving = true
         lifecycleScope.launch {
-            val ok = viewModel.sendUdpCommand("start")
-            if (!ok) {
-                isReceiving = false; return@launch
+            val success = viewModel.sendCommand("start")
+            if (!success) {
+                Log.e(TAG, "Start failed")
+                isReceiving = false
+                return@launch
             }
             viewModel.rtpReceiver.start { h264Decoder?.decode(it) }
         }
@@ -106,8 +107,7 @@ class VideoActivity : ComponentActivity() {
         if (!isReceiving) return
         isReceiving = false
         lifecycleScope.launch {
-            viewModel.rtpReceiver.stop()
-            viewModel.sendUdpCommand("stop")
+            viewModel.scheduleStop()
         }
     }
 
@@ -128,7 +128,7 @@ class VideoActivity : ComponentActivity() {
         Log.d(TAG, "Sending quality command: $command")
 
         lifecycleScope.launch {
-            viewModel.sendUdpCommand(command)
+            viewModel.sendCommand(command)
         }
     }
 

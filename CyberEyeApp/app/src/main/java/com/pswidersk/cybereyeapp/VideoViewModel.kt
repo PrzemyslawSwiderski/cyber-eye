@@ -5,12 +5,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pswidersk.cybereyeapp.AppState.cameraIp
 import com.pswidersk.cybereyeapp.h264.RtpReceiver
+import com.pswidersk.cybereyeapp.model.StatusResponse
+import com.pswidersk.cybereyeapp.model.Status
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.DeserializationStrategy
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
+
+private val json = Json { ignoreUnknownKeys = true }
 
 class VideoViewModel : ViewModel() {
 
@@ -19,8 +27,9 @@ class VideoViewModel : ViewModel() {
     lateinit var rtpReceiver: RtpReceiver
         private set
 
+    private var stopJob: Job? = null
+
     fun initCommunication() {
-        // Run in background to avoid NetworkOnMainThreadException
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (!::socket.isInitialized || socket.isClosed) {
@@ -38,37 +47,50 @@ class VideoViewModel : ViewModel() {
         }
     }
 
-    suspend fun sendUdpCommand(command: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendCommand(
+        command: String
+    ): Boolean = withContext(Dispatchers.IO) {
+        val response = requestCommand(command, StatusResponse.serializer())
+        return@withContext !(response == null || response.status != Status.OK)
+    }
+
+    suspend fun <T> requestCommand(
+        command: String,
+        deserializer: DeserializationStrategy<T>
+    ): T? = withContext(Dispatchers.IO) {
         val addr = InetSocketAddress(cameraIp.value, CONTROL_PORT)
         val data = command.toByteArray()
 
         try {
             socket.send(DatagramPacket(data, data.size, addr))
 
-            val buf = ByteArray(32)
+            val buf = ByteArray(4096)
             val reply = DatagramPacket(buf, buf.size)
-
-            // socket.receive will block this coroutine until data arrives
-            // or soTimeout is reached
             socket.receive(reply)
 
-            Log.d(TAG, "Command '$command' → '${String(reply.data, 0, reply.length)}'")
-            true // This is the return value for the whole block
+            val raw = String(reply.data, 0, reply.length, Charsets.UTF_8)
+            Log.d(TAG, "Command '$command' → $raw")
+            json.decodeFromString(deserializer, raw)
         } catch (ex: Exception) {
             Log.e(TAG, "Error response for '$command'", ex)
-            false // Return false on timeout or socket error
+            null
+        }
+    }
+
+    fun scheduleStop() {
+        stopJob = viewModelScope.launch(Dispatchers.IO) {
+            val success = sendCommand("stop")
+            if (!success) {
+                Log.e(TAG, "Stop failed")
+            }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        // This is called when the Activity is finished for good
-        if (::socket.isInitialized) {
-            socket.close()
-        }
-        if (::rtpReceiver.isInitialized) {
-            rtpReceiver.stop()
-        }
+        runBlocking { stopJob?.join() }
+        if (::socket.isInitialized) socket.close()
+        if (::rtpReceiver.isInitialized) rtpReceiver.stop()
         Log.d(TAG, "Socket closed")
     }
 }
