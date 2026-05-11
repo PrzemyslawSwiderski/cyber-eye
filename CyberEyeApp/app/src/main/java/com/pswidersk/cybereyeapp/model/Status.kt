@@ -8,5 +8,6 @@ enum class Status {
     @SerialName("ok")
     OK,
     @SerialName("stopped")
-    STOPPED
+    STOPPED,
+    UNKNOWN
 }

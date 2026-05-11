@@ -50,7 +50,7 @@ public:
     capture_ = capture;
     config_ = config;
     is_running_ = true;
-    memset(&client_addr_, 0, sizeof(client_addr_));
+    memset(&video_client_addr_, 0, sizeof(video_client_addr_));
 
     // Initialize command processor
     cmd_processor_ = new CmdProcessor();
@@ -218,7 +218,7 @@ private:
 
         if (capture_->captureFrame(frame_data, frame_size, sequence))
         {
-          sendFrame(sock, frame_data, frame_size, &client_addr_);
+          sendFrame(sock, frame_data, frame_size, &video_client_addr_);
 
           frame_count++;
 
@@ -293,13 +293,11 @@ private:
         inet_ntoa_r(source_addr.sin_addr, source_ip, sizeof(source_ip));
         ESP_LOGI(TAG, "Command \"%s\" from %s:%d", buffer, source_ip, ntohs(source_addr.sin_port));
 
-        // adjust client data channel to a last sender
-        client_addr_ = source_addr;
-
         if (cmd_processor_)
         {
-          CmdProcessor::Context ctx{&stream_active_};
+          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr};
           auto result = cmd_processor_->process(buffer, ctx);
+          ESP_LOGI(TAG, "Control response: %s", result.response);
 
           sendto(sock, result.response, strlen(result.response), 0,
                  (struct sockaddr *)&source_addr, sizeof(source_addr));
@@ -322,7 +320,7 @@ private:
   static TaskHandle_t control_task_handle_;
   static bool is_running_;
   static std::atomic<bool> stream_active_;
-  static struct sockaddr_in client_addr_;
+  static struct sockaddr_in video_client_addr_;
   static V4L2H264Capture *capture_;
   static Config config_;
   static SemaphoreHandle_t stream_mutex_;
@@ -337,7 +335,7 @@ const char *UDPH264Streamer::TAG = "UDP_H264";
 TaskHandle_t UDPH264Streamer::data_task_handle_ = nullptr;
 TaskHandle_t UDPH264Streamer::control_task_handle_ = nullptr;
 bool UDPH264Streamer::is_running_ = false;
-struct sockaddr_in UDPH264Streamer::client_addr_ = {};
+struct sockaddr_in UDPH264Streamer::video_client_addr_ = {};
 V4L2H264Capture *UDPH264Streamer::capture_ = nullptr;
 UDPH264Streamer::Config UDPH264Streamer::config_ = {};
 CmdProcessor *UDPH264Streamer::cmd_processor_ = nullptr;

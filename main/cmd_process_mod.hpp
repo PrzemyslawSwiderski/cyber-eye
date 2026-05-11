@@ -7,12 +7,9 @@
 #include "driver/temperature_sensor.h"
 #include "wifi_mod.hpp"
 #include <atomic>
-#include <cstring>
-#include <cstdint>
-#include <cstdio>
-#include <ctime>
+#include <cstdlib>
+#include <limits>
 #include <cmath>
-#include <string>
 
 class CmdProcessor
 {
@@ -20,6 +17,8 @@ public:
   struct Context
   {
     std::atomic<bool> *stream_active;
+    struct sockaddr_in *video_client_addr;
+    struct sockaddr_in *source_addr;
   };
 
   struct Result
@@ -45,6 +44,7 @@ public:
   {
     if (strcmp(cmd, "start") == 0)
     {
+      *ctx.video_client_addr = *ctx.source_addr;
       ctx.stream_active->store(true);
       return {"{\"status\":\"ok\"}"};
     }

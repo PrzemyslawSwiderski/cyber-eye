@@ -93,13 +93,11 @@ class VideoActivity : ComponentActivity() {
         if (isReceiving) return
         isReceiving = true
         lifecycleScope.launch {
-            val success = viewModel.sendCommand("start")
+            val success = viewModel.startVideo(h264Decoder!!)
             if (!success) {
-                Log.e(TAG, "Start failed")
                 isReceiving = false
                 return@launch
             }
-            viewModel.rtpReceiver.start { h264Decoder?.decode(it) }
         }
     }
 
