@@ -49,7 +49,9 @@ fun ControlSlider(
                 value = value,
                 onValueChange = onValueChange,
                 valueRange = valueRange,
-                modifier = Modifier.weight(1f).height(5.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(5.dp),
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = MaterialTheme.colorScheme.primary

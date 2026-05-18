@@ -2,10 +2,10 @@ package com.pswidersk.cybereyeapp.h264
 
 import android.util.Log
 import com.pswidersk.cybereyeapp.AppState
+import com.pswidersk.cybereyeapp.CameraClient
 import com.pswidersk.cybereyeapp.TAG
 import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
-import java.net.DatagramSocket
 import java.net.SocketTimeoutException
 import kotlin.math.abs
 
@@ -16,9 +16,7 @@ data class RtpStats(
     val fps: Float
 )
 
-class RtpReceiver(
-    private val socket: DatagramSocket
-) {
+class RtpReceiver {
 
     private var running = false
     private val fragmentBuffer = ByteArrayOutputStream()
@@ -51,9 +49,9 @@ class RtpReceiver(
             val buf = ByteArray(65535)
             val packet = DatagramPacket(buf, buf.size)
 
-            while (running && socket.isBound && !socket.isClosed) {
+            while (running) {
                 try {
-                    socket.receive(packet)
+                    CameraClient.fillVideoBuffer(packet)
                     processPacket(packet, onNalUnit)
                 } catch (_: SocketTimeoutException) {
                     Log.w(TAG, "Socket timeout")
@@ -111,6 +109,13 @@ class RtpReceiver(
             frameCount++
         }
 
+        emitStats(nowMs)
+
+        // ── Parse and deliver NAL units ───────────────────────────────────────
+        parseRtp(data, length).forEach { onNalUnit(it) }
+    }
+
+    private fun emitStats(nowMs: Long) {
         // ── Emit stats every second ───────────────────────────────────────────
         val elapsedMs = nowMs - windowStartMs
         if (elapsedMs >= 1000) {
@@ -132,9 +137,6 @@ class RtpReceiver(
             windowStartMs = nowMs
             fpsWindowStartMs = nowMs
         }
-
-        // ── Parse and deliver NAL units ───────────────────────────────────────
-        parseRtp(data, length).forEach { onNalUnit(it) }
     }
 
     private fun parseRtp(data: ByteArray, length: Int): List<ByteArray> {

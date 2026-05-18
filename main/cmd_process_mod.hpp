@@ -52,6 +52,7 @@ public:
     {
       *ctx.deferred_action = [ctx]()
       {
+        vTaskDelay(pdMS_TO_TICKS(100)); // Small delay to ensure response is sent before streaming starts
         *ctx.video_client_addr = *ctx.source_addr;
         ctx.stream_active->store(true);
       };
@@ -90,7 +91,7 @@ public:
       {
         esp_restart();
       };
-      return {"{\"status\":\"rebooting\"}"};
+      return {"{\"status\":\"ok\"}"};
     }
 
     if (strcmp(cmd, "status") == 0)

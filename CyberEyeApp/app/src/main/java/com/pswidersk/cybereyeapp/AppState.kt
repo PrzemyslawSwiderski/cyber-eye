@@ -15,7 +15,7 @@ object AppState {
     val cameraIp = mutableStateOf(DEFAULT_IP)
     private val _rtpStats = MutableStateFlow(RtpStats(0f, 0f, 0f, 0f))
     val rtpStats = _rtpStats.asStateFlow()
-
+    val cameraStatus = mutableStateOf("PENDING")
     fun updateStats(stats: RtpStats) {
         _rtpStats.value = stats
     }

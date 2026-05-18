@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import com.pswidersk.cybereyeapp.AppState.cameraStatus
+import com.pswidersk.cybereyeapp.model.StatusResponse
 import com.pswidersk.cybereyeapp.ui.screens.HomeScreen
 import com.pswidersk.cybereyeapp.ui.theme.CyberEyeAppTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -23,6 +27,21 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(padding),
                         onShowVideoClick = {
                             startActivity(Intent(this, VideoActivity::class.java))
+                        },
+                        onRebootClick = {
+                            lifecycleScope.launch {
+                                CameraClient.sendCommand("reboot")
+                            }
+                        },
+                        onCheckStatusClick = {
+                            lifecycleScope.launch {
+                                val response = CameraClient.requestCommand(
+                                    "status",
+                                    StatusResponse.serializer(),
+                                    StatusResponse()
+                                )
+                                cameraStatus.value = response.status.name
+                            }
                         }
                     )
                 }

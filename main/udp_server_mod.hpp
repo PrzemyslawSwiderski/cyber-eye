@@ -158,7 +158,7 @@ private:
       {
         sent = sendto(sock, packet.data(), packet.size(), 0,
                       (struct sockaddr *)destination_addr, sizeof(*destination_addr));
-
+        // sent = 1; // Simulate successful send for testing without actual network
         if (sent > 0)
           break;
 
@@ -252,8 +252,6 @@ private:
     }
 
     ESP_LOGI(TAG, "dataTask closing. Sent %u frames total", frame_count);
-
-    capture_->stop();
 
     if (sock >= 0)
     {

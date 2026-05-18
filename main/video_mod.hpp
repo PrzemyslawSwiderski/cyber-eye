@@ -39,12 +39,6 @@ public:
     enc_buffer_ = nullptr;
   }
 
-  ~V4L2H264Capture()
-  {
-    stop();
-    cleanup();
-  }
-
   esp_err_t init()
   {
     if (is_initialized_)
@@ -116,25 +110,6 @@ public:
              width, height, config_.bitrate, config_.i_period);
 
     return ESP_OK;
-  }
-
-  void stop()
-  {
-    if (capture_fd_ >= 0)
-    {
-      int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-      ioctl(capture_fd_, VIDIOC_STREAMOFF, &type);
-    }
-
-    if (encoding_fd_ >= 0)
-    {
-      int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-      ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type);
-      type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-      ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type);
-    }
-
-    ESP_LOGI(TAG, "Streaming stopped");
   }
 
   void set_quality(int qp)
@@ -386,7 +361,11 @@ private:
         return false;
       }
 
-      ioctl(capture_fd_, VIDIOC_QBUF, &buf);
+      if (ioctl(capture_fd_, VIDIOC_QBUF, &buf) < 0)
+      {
+        ESP_LOGE(TAG, "Failed to queue capture buffer");
+        return false;
+      }
     }
 
     // Start capture streaming
@@ -477,7 +456,11 @@ private:
       return false;
     }
 
-    ioctl(encoding_fd_, VIDIOC_QBUF, &buf);
+    if (ioctl(encoding_fd_, VIDIOC_QBUF, &buf) < 0)
+    {
+      ESP_LOGE(TAG, "Failed to queue encoder capture buffer");
+      return false;
+    }
     return true;
   }
 
@@ -522,36 +505,6 @@ private:
     }
 
     return true;
-  }
-
-  void cleanup()
-  {
-    for (int i = 0; i < BUFFER_COUNT; i++)
-    {
-      if (cap_buffer_[i] && cap_buffer_[i] != MAP_FAILED)
-      {
-        munmap(cap_buffer_[i], 0);
-        cap_buffer_[i] = nullptr;
-      }
-    }
-
-    if (enc_buffer_ && enc_buffer_ != MAP_FAILED)
-    {
-      munmap(enc_buffer_, 0);
-      enc_buffer_ = nullptr;
-    }
-
-    if (capture_fd_ >= 0)
-    {
-      close(capture_fd_);
-      capture_fd_ = -1;
-    }
-
-    if (encoding_fd_ >= 0)
-    {
-      close(encoding_fd_);
-      encoding_fd_ = -1;
-    }
   }
 
   std::mutex encoder_mutex_;

@@ -126,8 +126,12 @@ class VideoActivity : ComponentActivity() {
         Log.d(TAG, "Sending quality command: $command")
 
         lifecycleScope.launch {
-            viewModel.sendCommand(command)
+            CameraClient.sendCommand(command)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
     }
 
     private fun setScreenBrightness(value: Float) {
