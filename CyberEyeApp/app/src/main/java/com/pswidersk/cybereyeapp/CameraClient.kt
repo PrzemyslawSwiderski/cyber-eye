@@ -2,6 +2,7 @@ package com.pswidersk.cybereyeapp
 
 import android.util.Log
 import com.pswidersk.cybereyeapp.AppState.cameraIp
+import com.pswidersk.cybereyeapp.model.StatsResponse
 import com.pswidersk.cybereyeapp.model.Status
 import com.pswidersk.cybereyeapp.model.StatusResponse
 import kotlinx.coroutines.Dispatchers
@@ -14,10 +15,22 @@ import java.net.InetSocketAddress
 
 private val json = Json { ignoreUnknownKeys = true }
 
+private const val DEFAULT_TIMEOUT = 2000
+
 object CameraClient {
 
-    private val controlSocket = DatagramSocket().apply { soTimeout = 2000 }
-    private val videoSocket = DatagramSocket().apply { soTimeout = 2000 }
+    private val controlSocket = DatagramSocket().apply { soTimeout = DEFAULT_TIMEOUT }
+
+    @Volatile
+    private var videoSocket = DatagramSocket().apply { soTimeout = DEFAULT_TIMEOUT }
+    private val videoSocketLock = Any()
+
+    private fun resetVideoSocket(): DatagramSocket {
+        synchronized(videoSocketLock) {
+            videoSocket.close()
+            return DatagramSocket().apply { soTimeout = DEFAULT_TIMEOUT }.also { videoSocket = it }
+        }
+    }
 
     suspend fun sendCommand(command: String): Boolean {
         val response = requestCommand(command, StatusResponse.serializer(), StatusResponse())
@@ -32,15 +45,23 @@ object CameraClient {
             StatusResponse(),
             controlSocket
         )
-        val startResponse: StatusResponse = requestCommand(
+
+        val freshVideoSocket = resetVideoSocket()
+        return@withContext requestCommand(
             "start",
             StatusResponse.serializer(),
             StatusResponse(),
-            videoSocket
+            freshVideoSocket
         )
-        return@withContext startResponse
     }
 
+    suspend fun fetchStats(): Long {
+        val sentAt = System.currentTimeMillis()
+        val stats = requestCommand("stats", StatsResponse.serializer(), StatsResponse())
+        val rttMs = System.currentTimeMillis() - sentAt
+        AppState.cameraStats.value = stats
+        return rttMs
+    }
 
     fun fillVideoBuffer(packet: DatagramPacket) {
         return videoSocket.receive(packet)

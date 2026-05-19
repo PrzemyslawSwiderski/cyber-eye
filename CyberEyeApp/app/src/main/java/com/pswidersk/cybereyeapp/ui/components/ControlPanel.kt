@@ -1,5 +1,6 @@
 package com.pswidersk.cybereyeapp.ui.components
 
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,22 +17,48 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.pswidersk.cybereyeapp.CameraClient
+import com.pswidersk.cybereyeapp.TAG
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Colors.background
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.labelSize
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.titleSize
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+
+private const val DEFAULT_EXPOSURE = 80f
+private const val DEFAULT_QUALITY = 45f
 
 @Composable
-fun ControlPanel(
-    brightness: Float,
-    quality: Float,
-    onBrightnessChange: (Float) -> Unit,
-    onQualityChange: (Float) -> Unit
-) {
+fun ControlPanel() {
+    var exposure by remember { mutableFloatStateOf(DEFAULT_EXPOSURE) }
+    var quality by remember { mutableFloatStateOf(DEFAULT_QUALITY) }
+    val coroutineScope = rememberCoroutineScope()
+    var lastSentQuality = DEFAULT_QUALITY
+
+    fun sendQualityCommand(value: Float) {
+        if (abs(value - lastSentQuality) < 1f) return
+        lastSentQuality = value
+        val level = value.toInt()
+        Log.d(TAG, "Sending quality command: quality:$level")
+        coroutineScope.launch { CameraClient.sendCommand("quality:$level") }
+    }
+
+    fun sendExposureCommand(value: Float) {
+        val level = value.toInt()
+        Log.d(TAG, "Sending exposure command: exposure:$level")
+        coroutineScope.launch { CameraClient.sendCommand("exposure:$level") }
+    }
+
     Column(
         modifier = Modifier
             .width(700.dp)
@@ -44,23 +71,23 @@ fun ControlPanel(
 
         ControlSlider(
             icon = "☀️",
-            label = "Brightness",
-            value = brightness,
-            onValueChange = onBrightnessChange,
-            valueRange = 0.1f..1.0f
+            label = "Exposure",
+            value = exposure,
+            onValueChange = { exposure = it; sendExposureCommand(it) },
+            valueRange = 2f..235f
         )
 
         ControlSlider(
             icon = "📊",
             label = "Quality",
             value = quality,
-            onValueChange = onQualityChange,
-            valueRange = 0.0f..1.0f
+            onValueChange = { quality = it; sendQualityCommand(it) },
+            valueRange = 0f..51f
         )
         QualityLevelIndicator(quality = quality)
-
     }
 }
+
 
 @Composable
 fun OverlayHeader() {
@@ -80,19 +107,19 @@ fun OverlayHeader() {
 @Composable
 fun QualityLevelIndicator(quality: Float) {
     AnimatedContent(
-        targetState = (quality * 100).toInt(),
+        targetState = quality.toInt(),
         transitionSpec = {
             fadeIn() + slideInHorizontally() togetherWith
                     fadeOut() + slideOutHorizontally()
         }
-    ) { qualityPercent ->
+    ) { level ->
         Text(
-            text = when (qualityPercent) {
-                in 0..20 -> "Low — best performance"
-                in 21..40 -> "Medium-low"
-                in 41..60 -> "Medium — balanced"
-                in 61..80 -> "Medium-high"
-                else -> "High — best image"
+            text = when (level) {
+                in 0..10 -> "Best image quality"
+                in 11..20 -> "High quality"
+                in 21..30 -> "Balanced"
+                in 31..40 -> "Low quality"
+                else -> "Lowest quality — best performance"
             },
             color = Color.Cyan,
             fontSize = labelSize,

@@ -28,21 +28,6 @@ class MainActivity : ComponentActivity() {
                         onShowVideoClick = {
                             startActivity(Intent(this, VideoActivity::class.java))
                         },
-                        onRebootClick = {
-                            lifecycleScope.launch {
-                                CameraClient.sendCommand("reboot")
-                            }
-                        },
-                        onCheckStatusClick = {
-                            lifecycleScope.launch {
-                                val response = CameraClient.requestCommand(
-                                    "status",
-                                    StatusResponse.serializer(),
-                                    StatusResponse()
-                                )
-                                cameraStatus.value = response.status.name
-                            }
-                        }
                     )
                 }
             }

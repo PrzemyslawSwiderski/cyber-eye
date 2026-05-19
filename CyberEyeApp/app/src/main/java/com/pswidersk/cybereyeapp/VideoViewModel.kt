@@ -14,25 +14,13 @@ import kotlinx.coroutines.withContext
 
 class VideoViewModel : ViewModel() {
 
-    private var rtpReceiver: RtpReceiver? = null
+    private val rtpReceiver = RtpReceiver()
     private var stopJob: Job? = null
-
-    fun initCommunication() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (rtpReceiver == null) {
-                    rtpReceiver = RtpReceiver()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error: ${e.message}")
-            }
-        }
-    }
 
     suspend fun startVideo(h264Decoder: H264Decoder): Boolean = withContext(Dispatchers.IO) {
         val response = CameraClient.startVideo()
         if (response.status != Status.OK) return@withContext false
-        rtpReceiver?.start { h264Decoder.decode(it) }
+        rtpReceiver.start { h264Decoder.decode(it) }
         true
     }
 
@@ -45,6 +33,6 @@ class VideoViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         runBlocking { stopJob?.join() }
-        rtpReceiver?.stop()
+        rtpReceiver.stop()
     }
 }

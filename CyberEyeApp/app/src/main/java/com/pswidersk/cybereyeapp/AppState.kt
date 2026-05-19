@@ -2,6 +2,8 @@ package com.pswidersk.cybereyeapp
 
 import androidx.compose.runtime.mutableStateOf
 import com.pswidersk.cybereyeapp.h264.RtpStats
+import com.pswidersk.cybereyeapp.model.StatsResponse
+import com.pswidersk.cybereyeapp.model.Status
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -15,7 +17,8 @@ object AppState {
     val cameraIp = mutableStateOf(DEFAULT_IP)
     private val _rtpStats = MutableStateFlow(RtpStats(0f, 0f, 0f, 0f))
     val rtpStats = _rtpStats.asStateFlow()
-    val cameraStatus = mutableStateOf("PENDING")
+    val cameraStatus = mutableStateOf(Status.PENDING)
+    val cameraStats = MutableStateFlow(StatsResponse())
     fun updateStats(stats: RtpStats) {
         _rtpStats.value = stats
     }

@@ -15,16 +15,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.pswidersk.cybereyeapp.CameraClient
+import kotlinx.coroutines.launch
 
 @Composable
-fun RebootCamera(
-    onConfirm: () -> Unit
-) {
+fun CameraRebootSection() {
     var showDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     if (showDialog) {
         AlertDialog(
@@ -35,7 +37,9 @@ fun RebootCamera(
                 Button(
                     onClick = {
                         showDialog = false
-                        onConfirm()
+                        coroutineScope.launch {
+                            CameraClient.sendCommand("reboot")
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                 ) {

@@ -11,5 +11,6 @@ enum class Status {
 
     @SerialName("streaming")
     STREAMING,
+    PENDING,
     UNKNOWN
 }
