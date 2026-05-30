@@ -204,9 +204,6 @@ private:
       ESP_LOGE(TAG, "Failed to start video capture");
     }
 
-    uint32_t frame_count = 0;
-    uint32_t last_log_time = 0;
-
     while (is_running_)
     {
       if (stream_active_.load())
@@ -218,17 +215,6 @@ private:
         if (capture_->captureFrame(frame_data, frame_size, sequence))
         {
           sendFrame(sock, frame_data, frame_size, &video_client_addr_);
-
-          frame_count++;
-
-          // Periodic statistics
-          uint32_t now = xTaskGetTickCount();
-          if (now - last_log_time > pdMS_TO_TICKS(1000)) // Every second
-          {
-            ESP_LOGI(TAG, "Frames sent: %u ", frame_count);
-            last_log_time = now;
-            frame_count = 0;
-          }
         }
         else
         {
@@ -242,7 +228,7 @@ private:
       }
     }
 
-    ESP_LOGI(TAG, "dataTask closing. Sent %u frames total", frame_count);
+    ESP_LOGI(TAG, "dataTask closing.");
 
     if (sock >= 0)
     {
@@ -293,7 +279,7 @@ private:
         if (cmd_processor_)
         {
           std::function<void()> deferred_action;
-          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, &deferred_action};
+          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, &deferred_action, capture_};
           auto result = cmd_processor_->process(buffer, ctx);
           ESP_LOGI(TAG, "Control response: %s", result.response);
 

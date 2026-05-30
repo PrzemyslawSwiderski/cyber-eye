@@ -7,32 +7,45 @@ import com.pswidersk.cybereyeapp.h264.H264Decoder
 import com.pswidersk.cybereyeapp.h264.RtpReceiver
 import com.pswidersk.cybereyeapp.model.Status
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 
 class VideoViewModel : ViewModel() {
 
     private val rtpReceiver = RtpReceiver()
-    private var stopJob: Job? = null
+    private var isStreaming = false
 
-    suspend fun startVideo(h264Decoder: H264Decoder): Boolean = withContext(Dispatchers.IO) {
-        val response = CameraClient.startVideo()
-        if (response.status != Status.OK) return@withContext false
-        rtpReceiver.start { h264Decoder.decode(it) }
-        true
+    fun startVideo(decoder: H264Decoder) {
+        if (isStreaming) return
+        isStreaming = true
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val response = CameraClient.startVideo()
+            if (response.status == Status.OK) {
+                rtpReceiver.start { decoder.decode(it) }
+            } else {
+                isStreaming = false
+                Log.e(TAG, "Failed to start video: ${response.status}")
+            }
+        }
     }
 
-    fun scheduleStop() {
-        stopJob = viewModelScope.launch(Dispatchers.IO) {
-            if (!CameraClient.sendCommand("stop")) Log.e(TAG, "Stop failed")
+    fun stopVideo() {
+        if (!isStreaming) return
+        isStreaming = false
+
+        viewModelScope.launch(Dispatchers.IO) {
+            CameraClient.sendCommand("stop")
+            rtpReceiver.stop()
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        runBlocking { stopJob?.join() }
-        rtpReceiver.stop()
+        viewModelScope.launch(Dispatchers.IO) {
+            if (isStreaming) {
+                CameraClient.sendCommand("stop")
+                rtpReceiver.stop()
+            }
+        }
     }
 }

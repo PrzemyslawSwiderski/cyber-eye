@@ -28,6 +28,7 @@ public:
     int bitrate = 2000000;
     int i_period = 30;
     int quality = 30;
+    int exposure = 90;
     int width = 0;
     int height = 0;
   };
@@ -246,7 +247,7 @@ private:
     setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP, config_.quality + 5, "H264_MAX_QP");
 
     // Exposure 0x00980911 (int)        : min=2 max=235 step=1 default=80
-    setControl(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, 90, "EXPOSURE");
+    setControl(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, config_.exposure, "EXPOSURE");
     setControl(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_VFLIP, 1, "VFLIP");
     setControl(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_HFLIP, 0, "HFLIP");
 

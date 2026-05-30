@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.pswidersk.cybereyeapp.AppState
 import com.pswidersk.cybereyeapp.CameraClient
 import com.pswidersk.cybereyeapp.TAG
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Colors.background
@@ -55,7 +56,10 @@ fun ControlPanel() {
         val bitrateLevel = bitrate.toInt()
         val command = "camera:::qual:$qualityLevel:::exp:$exposureLevel:::bit:$bitrateLevel"
         Log.d(TAG, "Sending update command: $command")
-        coroutineScope.launch { CameraClient.sendCommand(command) }
+        coroutineScope.launch {
+            CameraClient.sendCommand(command)
+            AppState.requestVideoReload()
+        }
     }
 
     Column(

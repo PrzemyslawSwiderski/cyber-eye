@@ -1,5 +1,6 @@
 package com.pswidersk.cybereyeapp
 
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.pswidersk.cybereyeapp.h264.RtpStats
 import com.pswidersk.cybereyeapp.model.StatsResponse
@@ -19,6 +20,12 @@ object AppState {
     val rtpStats = _rtpStats.asStateFlow()
     val cameraStatus = mutableStateOf(Status.PENDING)
     val cameraStats = MutableStateFlow(StatsResponse())
+    val shouldReloadVideo = mutableIntStateOf(0)
+
+    fun requestVideoReload() {
+        shouldReloadVideo.intValue++
+    }
+
     fun updateStats(stats: RtpStats) {
         _rtpStats.value = stats
     }

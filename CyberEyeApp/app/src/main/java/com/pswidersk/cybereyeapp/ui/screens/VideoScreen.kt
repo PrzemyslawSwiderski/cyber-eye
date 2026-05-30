@@ -23,11 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.pswidersk.cybereyeapp.AppState
 import com.pswidersk.cybereyeapp.ui.components.ControlPanel
 import com.pswidersk.cybereyeapp.ui.components.StatsPanel
 
 @Composable
-fun VideoScreen(onRestartStream: () -> Unit = {}) {
+fun VideoScreen() {
     var showControlPanel by remember { mutableStateOf(false) }
     var showStatsPanel by remember { mutableStateOf(true) }
 
@@ -63,7 +64,7 @@ fun VideoScreen(onRestartStream: () -> Unit = {}) {
             verticalAlignment = Alignment.Bottom
         ) {
             IconButton(
-                onClick = onRestartStream,
+                onClick = { AppState.requestVideoReload() }
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
@@ -95,5 +96,4 @@ fun VideoScreen(onRestartStream: () -> Unit = {}) {
             }
         }
     }
-
 }
