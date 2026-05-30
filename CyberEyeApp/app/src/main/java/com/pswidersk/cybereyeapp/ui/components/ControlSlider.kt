@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.labelSize
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.valueSize
+import kotlin.math.roundToInt
 
 @Composable
 fun ControlSlider(
@@ -26,6 +27,13 @@ fun ControlSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     icon: String
 ) {
+    val displayValue = when {
+        valueRange.endInclusive <= 1f -> "${(value * 100).roundToInt()}%"
+        valueRange.endInclusive <= 100f -> "${value.roundToInt()}"
+        valueRange.endInclusive <= 1000f -> "${value.roundToInt()}"
+        else -> "${(value / 1000).roundToInt()}k"
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -59,12 +67,11 @@ fun ControlSlider(
             )
 
             Text(
-                text = "${(value * 100).toInt()}%",
+                text = displayValue,
                 color = Color.White,
                 fontSize = valueSize,
-                modifier = Modifier.width(40.dp)
+                modifier = Modifier.width(50.dp)
             )
         }
-
     }
 }
