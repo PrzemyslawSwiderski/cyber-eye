@@ -16,18 +16,15 @@ const val CONTROL_PORT = 3334
 data class CameraSettings(
     val exposure: Float = DEFAULT_EXPOSURE,
     val quality: Float = DEFAULT_QUALITY,
-    val bitrate: Float = DEFAULT_BITRATE
 ) {
     companion object {
         const val DEFAULT_EXPOSURE = 80f
-        const val DEFAULT_QUALITY = 45f
-        const val DEFAULT_BITRATE = 5000f
-
+        const val DEFAULT_QUALITY = 46f
         val DEFAULTS = CameraSettings()
     }
 
     fun toCommand(): String {
-        return "camera:::qual:${quality.toInt()}:::exp:${exposure.toInt()}:::bit:${bitrate.toInt()}"
+        return "camera:::qual:${quality.toInt()}:::exp:${exposure.toInt()}"
     }
 }
 
@@ -60,9 +57,5 @@ object AppState {
 
     fun updateQuality(value: Float) {
         cameraSettings.value = cameraSettings.value.copy(quality = value)
-    }
-
-    fun updateBitrate(value: Float) {
-        cameraSettings.value = cameraSettings.value.copy(bitrate = value)
     }
 }

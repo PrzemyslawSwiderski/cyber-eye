@@ -39,18 +39,13 @@ extern "C" void app_main(void)
   // Configure video capture
   V4L2H264Capture::Config capture_config;
   capture_config.capture_device = "/dev/video0";
-  // capture_config.bitrate = 2000000; // 2 Mbps
-  //capture_config.bitrate = 4000000; // 4 Mbps
-  capture_config.bitrate = 8000000; // 8 Mbps
-  // capture_config.bitrate = 25000;
-  // capture_config.bitrate = 25000000;
 
   // I-frame Interval (default: 12)
-  capture_config.i_period = 15;
-  // capture_config.i_period = 15;
+  capture_config.i_period = 30;
   // 0 to 51 (where 0 is near-perfect/lossless quality and 51 is the worst quality)
-  // capture_config.quality = 45;
-  capture_config.quality = 45;
+  capture_config.quality = 46;
+  // Exposure (default: 90)
+  capture_config.exposure = 80;
 
   // Initialize capture (but don't start streaming yet)
   V4L2H264Capture capture(capture_config);

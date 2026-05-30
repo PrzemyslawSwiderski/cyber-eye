@@ -77,15 +77,6 @@ fun ControlPanel() {
         )
         QualityLevelIndicator(quality = settings.quality)
 
-        ControlSlider(
-            icon = "📡",
-            label = "Bitrate (kbps)",
-            value = settings.bitrate,
-            onValueChange = { AppState.updateBitrate(it) },
-            valueRange = 500f..20000f
-        )
-        BitrateLevelIndicator(bitrate = settings.bitrate)
-
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(

@@ -25,10 +25,9 @@ public:
   struct Config
   {
     const char *capture_device = "/dev/video0";
-    int bitrate = 2000000;
     int i_period = 30;
-    int quality = 30;
-    int exposure = 90;
+    int quality = 40;
+    int exposure = 80;
     int width = 0;
     int height = 0;
   };
@@ -92,8 +91,8 @@ public:
       ESP_LOGI(TAG, "Detected resolution: %dx%d", width_, height_);
     }
 
-    if (!configureEncoder())
-      return ESP_FAIL;
+    configureEncoder();
+
     initialized_ = true;
     return ESP_OK;
   }
@@ -116,8 +115,8 @@ public:
 
     streaming_ = true;
     frame_sequence_ = 0;
-    ESP_LOGI(TAG, "H264 capture started: %dx%d @ %d bps, GOP=%d",
-             width_, height_, config_.bitrate, config_.i_period);
+    ESP_LOGI(TAG, "H264 capture started: %dx%d, GOP=%d",
+             width_, height_, config_.i_period);
     return ESP_OK;
   }
 
@@ -235,23 +234,24 @@ private:
   static constexpr int ENCODER_BUFFER_COUNT = 3;
   static constexpr int FRAME_TIMEOUT_MS = 2;
 
-  bool configureEncoder()
+  void configureEncoder()
   {
-    // Video Bitrate 0x009909cf (int)                : min=25000 max=25000000 step=25000 default=10000000
-    setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_BITRATE, config_.bitrate, "BITRATE");
+    // Disable bitrate control by setting it very high (effectively unlimited)
+    setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_BITRATE, 25000000, "BITRATE");
     // H264 I-Frame Period 0x00990a66 (int)          : min=1 max=120 step=1 default=30
     setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_I_PERIOD, config_.i_period, "H264_I_PERIOD");
 
+    int qp_mid = config_.quality;
     // H264 Minimum QP Value 0x00990a61 (int)        : min=0 max=51 step=1 default=25
-    setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MIN_QP, config_.quality, "H264_MIN_QP");
-    setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP, config_.quality + 5, "H264_MAX_QP");
+    setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MIN_QP,
+               std::max(1, qp_mid - 5), "MIN_QP");
+    setControl(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP,
+               std::min(51, qp_mid + 5), "MAX_QP");
 
     // Exposure 0x00980911 (int)        : min=2 max=235 step=1 default=80
     setControl(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, config_.exposure, "EXPOSURE");
     setControl(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_VFLIP, 1, "VFLIP");
     setControl(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_HFLIP, 0, "HFLIP");
-
-    return true;
   }
 
   void setControl(int fd, uint32_t ctrl_class, uint32_t id, int32_t value, const char *param)

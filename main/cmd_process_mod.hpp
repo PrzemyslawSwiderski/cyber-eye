@@ -161,12 +161,12 @@ private:
       return {"{\"error\":\"camera not available\"}"};
     }
 
-    int quality = -1, exposure = -1, bitrate = -1;
-    parseCameraParams(cmd, quality, exposure, bitrate);
+    int quality = -1, exposure = -1;
+    parseCameraParams(cmd, quality, exposure);
 
-    if (quality < 0 && exposure < 0 && bitrate < 0)
+    if (quality < 0 && exposure < 0)
     {
-      return {"{\"error\":\"no valid parameters. Use: camera:::qual:VALUE:::exp:VALUE:::bit:VALUE\"}"};
+      return {"{\"error\":\"no valid parameters. Use: camera:::qual:VALUE:::exp:VALUE\"}"};
     }
 
     // Apply configuration directly to capture object
@@ -174,23 +174,19 @@ private:
 
     if (quality >= 0)
       config.quality = quality;
-    if (bitrate >= 0)
-      config.bitrate = bitrate;
     if (exposure >= 0)
       config.exposure = exposure;
-    // Note: exposure is applied during encoder configuration in init/start
 
     ctx.capture->updateConfig(config);
 
     snprintf(stats_buffer_, sizeof(stats_buffer_),
-             "{\"status\":\"ok\",\"qual\":%d,\"exp\":%d,\"bit\":%d}",
+             "{\"status\":\"ok\",\"qual\":%d,\"exp\":%d}",
              quality >= 0 ? quality : config.quality,
-             exposure >= 0 ? exposure : config.exposure,
-             bitrate >= 0 ? bitrate : config.bitrate);
+             exposure >= 0 ? exposure : config.exposure);
     return {stats_buffer_};
   }
 
-  void parseCameraParams(const char *cmd, int &quality, int &exposure, int &bitrate)
+  void parseCameraParams(const char *cmd, int &quality, int &exposure)
   {
     const char *pos = cmd;
 
@@ -209,10 +205,6 @@ private:
       else if (strncmp(pos, "exp:", 4) == 0)
       {
         exposure = atoi(pos + 4);
-      }
-      else if (strncmp(pos, "bit:", 4) == 0)
-      {
-        bitrate = atoi(pos + 4);
       }
     }
   }
