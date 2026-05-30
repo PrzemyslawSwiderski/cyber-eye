@@ -3564,6 +3564,23 @@ CONFIG_MBEDTLS_PKCS1_V21=y
 # end of NVS
 
 #
+# OpenThread
+#
+# default:
+# CONFIG_OPENTHREAD_ENABLED is not set
+
+#
+# OpenThread Spinel
+#
+# default:
+# CONFIG_OPENTHREAD_SPINEL_ONLY is not set
+# end of OpenThread Spinel
+
+# default:
+# CONFIG_OPENTHREAD_DEBUG is not set
+# end of OpenThread
+
+#
 # PThreads
 #
 # default:

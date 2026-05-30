@@ -65,7 +65,7 @@ public:
                                              nullptr,
                                              config_.task_priority + 1,
                                              &control_task_handle_,
-                                             0);
+                                             1);
 
     if (ret != pdPASS)
     {
@@ -92,14 +92,6 @@ public:
 
     ESP_LOGI(TAG, "UDP streamer started");
     return ESP_OK;
-  }
-
-  static void set_video_quality(int qp)
-  {
-    if (capture_)
-    {
-      capture_->set_quality(qp);
-    }
   }
 
   static void stop()
@@ -158,7 +150,6 @@ private:
       {
         sent = sendto(sock, packet.data(), packet.size(), 0,
                       (struct sockaddr *)destination_addr, sizeof(*destination_addr));
-        // sent = 1; // Simulate successful send for testing without actual network
         if (sent > 0)
           break;
 
@@ -302,7 +293,7 @@ private:
         if (cmd_processor_)
         {
           std::function<void()> deferred_action;
-          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, &UDPH264Streamer::set_video_quality, &deferred_action};
+          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, &deferred_action};
           auto result = cmd_processor_->process(buffer, ctx);
           ESP_LOGI(TAG, "Control response: %s", result.response);
 

@@ -23,7 +23,6 @@ public:
     std::atomic<bool> *stream_active;
     struct sockaddr_in *video_client_addr;
     struct sockaddr_in *source_addr;
-    void (*set_quality)(int);
     std::function<void()> *deferred_action;
   };
 
@@ -75,7 +74,7 @@ public:
       {
         *ctx.deferred_action = [ctx, value]()
         {
-          ctx.set_quality(value);
+          // ctx.set_quality(value);
         };
         return {"{\"status\":\"ok\"}"};
       }

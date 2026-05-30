@@ -8,6 +8,8 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
+#include <mutex>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -17,9 +19,9 @@
 #include "esp_err.h"
 
 #define H264_DEVICE_PATH "/dev/video11"
-#define BUFFER_COUNT 5
-// #define FRAME_TIMEOUT_MS 17 // ~60 FPS
-#define FRAME_TIMEOUT_MS 1
+#define BUFFER_COUNT 2
+#define ENCODER_BUFFER_COUNT 3 // Allow pipelining
+#define FRAME_TIMEOUT_MS 2     // Reduced from 5ms for lower latency
 
 class V4L2H264Capture
 {
@@ -27,38 +29,35 @@ public:
   struct Config
   {
     const char *capture_device = "/dev/video0";
-    int bitrate = 2000000; // 2 Mbps (reduced from 4)
-    int i_period = 30;     // I-frame every 30 frames
-    int quality = 30;      // QP value for quality (0-51)
+    int bitrate = 2000000;
+    int i_period = 30;
+    int quality = 30;
   };
 
   explicit V4L2H264Capture(const Config &config)
       : config_(config), capture_fd_(-1), encoding_fd_(-1), is_initialized_(false)
   {
     cap_buffer_[0] = cap_buffer_[1] = nullptr;
-    enc_buffer_ = nullptr;
+    encoder_capture_buffers_.clear();
   }
 
   esp_err_t init()
   {
     if (is_initialized_)
-    {
       return ESP_OK;
-    }
 
-    // Open capture device
-    capture_fd_ = open(config_.capture_device, O_RDWR);
+    capture_fd_ = open(config_.capture_device, O_RDWR | O_NONBLOCK);
     if (capture_fd_ < 0)
     {
       ESP_LOGE(TAG, "Failed to open capture device: %s", config_.capture_device);
       return ESP_FAIL;
     }
 
-    // Open encoder device
-    encoding_fd_ = open(H264_DEVICE_PATH, O_RDWR);
+    encoding_fd_ = open(H264_DEVICE_PATH, O_RDWR | O_NONBLOCK);
     if (encoding_fd_ < 0)
     {
       ESP_LOGE(TAG, "Failed to open encoder device: %s", H264_DEVICE_PATH);
+      close(capture_fd_);
       return ESP_FAIL;
     }
 
@@ -67,11 +66,42 @@ public:
     if (!configureEncoder())
     {
       ESP_LOGE(TAG, "Failed to configure encoder");
+      close(capture_fd_);
+      close(encoding_fd_);
       return ESP_FAIL;
     }
 
     is_initialized_ = true;
     return ESP_OK;
+  }
+
+  ~V4L2H264Capture()
+  {
+    if (is_initialized_)
+    {
+      // Stop streaming
+      int type;
+      type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type);
+      type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+      ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type);
+      type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      ioctl(capture_fd_, VIDIOC_STREAMOFF, &type);
+
+      // Unmap encoder capture buffers
+      for (auto buf : encoder_capture_buffers_)
+        munmap(buf, getEncoderBufferSize());
+
+      // Unmap capture buffers
+      for (int i = 0; i < BUFFER_COUNT; i++)
+      {
+        if (cap_buffer_[i])
+          munmap(cap_buffer_[i], getCaptureBufferSize());
+      }
+
+      close(capture_fd_);
+      close(encoding_fd_);
+    }
   }
 
   esp_err_t start()
@@ -83,126 +113,33 @@ public:
     }
 
     if (!setupCapture())
-    {
-      ESP_LOGE(TAG, "Failed to setup capture");
       return ESP_FAIL;
-    }
-
     if (!setupEncoderOutput())
-    {
-      ESP_LOGE(TAG, "Failed to setup encoder output");
       return ESP_FAIL;
-    }
-
     if (!setupEncoderCapture())
-    {
-      ESP_LOGE(TAG, "Failed to setup encoder capture");
       return ESP_FAIL;
-    }
-
     if (!startStreaming())
-    {
-      ESP_LOGE(TAG, "Failed to start streaming");
       return ESP_FAIL;
-    }
 
-    ESP_LOGI(TAG, "H264 capture started: %dx%d @ %d bps, GOP=%d",
-             width, height, config_.bitrate, config_.i_period);
-
-    return ESP_OK;
-  }
-
-  void set_quality(int qp)
-  {
-    if (qp < 0 || qp > 51)
-    {
-      ESP_LOGW(TAG, "Invalid QP value: %d, must be 0-51", qp);
-      return;
-    }
-    std::lock_guard<std::mutex> lock(encoder_mutex_);
-
-    config_.quality = qp;
-
-    if (set_qp_during_stream(qp) == ESP_OK)
-      ESP_LOGI(TAG, "Video quality set to QP %d", qp);
-    else
-      ESP_LOGE(TAG, "Failed to set video quality to QP %d", qp);
-  }
-
-  esp_err_t set_qp_during_stream(int qp)
-  {
-    // Stop both stream types
-    int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type) != 0)
-    {
-      ESP_LOGW(TAG, "failed to stop capture stream: %s", strerror(errno));
-      return ESP_FAIL;
-    }
-    type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-    if (ioctl(encoding_fd_, VIDIOC_STREAMOFF, &type) != 0)
-    {
-      ESP_LOGW(TAG, "failed to stop output stream: %s", strerror(errno));
-      return ESP_FAIL;
-    }
-
-    // Set MIN and MAX QP atomically in a single ioctl — no invalid intermediate state
-    struct v4l2_ext_control controls_arr[2] = {};
-    controls_arr[0].id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP;
-    controls_arr[0].value = qp;
-    controls_arr[1].id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP;
-    controls_arr[1].value = qp;
-
-    struct v4l2_ext_controls ext_ctrls = {};
-    ext_ctrls.ctrl_class = V4L2_CID_CODEC_CLASS;
-    ext_ctrls.count = 2;
-    ext_ctrls.controls = controls_arr;
-
-    if (ioctl(encoding_fd_, VIDIOC_S_EXT_CTRLS, &ext_ctrls) != 0)
-    {
-      ESP_LOGW(TAG, "failed to set QP controls: %s", strerror(errno));
-      // still try to restart even on failure
-    }
-    else
-    {
-      ESP_LOGI(TAG, "setting control: H264_MIN_QP and H264_MAX_QP, to: %d", qp);
-    }
-
-    // Re-queue encoder capture buffer (STREAMOFF dequeues everything)
-    struct v4l2_buffer enc_cap_qbuf = {};
-    enc_cap_qbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    enc_cap_qbuf.memory = V4L2_MEMORY_MMAP;
-    enc_cap_qbuf.index = 0;
-    if (ioctl(encoding_fd_, VIDIOC_QBUF, &enc_cap_qbuf) < 0)
-      ESP_LOGW(TAG, "failed to requeue encoder capture buffer: %s", strerror(errno));
-
-    // Restart both stream types
-    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (ioctl(encoding_fd_, VIDIOC_STREAMON, &type) != 0)
-    {
-      ESP_LOGW(TAG, "failed to restart capture stream: %s", strerror(errno));
-      return ESP_FAIL;
-    }
-    type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-    if (ioctl(encoding_fd_, VIDIOC_STREAMON, &type) != 0)
-    {
-      ESP_LOGW(TAG, "failed to restart output stream: %s", strerror(errno));
-      return ESP_FAIL;
-    }
+    ESP_LOGI(TAG, "H264 capture started: %dx%d @ %d bps, GOP=%d (pipelined with %d encoder buffers)",
+             width_, height_, config_.bitrate, config_.i_period, ENCODER_BUFFER_COUNT);
 
     return ESP_OK;
   }
 
   bool captureFrame(uint8_t *&data, size_t &size, uint32_t &sequence)
   {
-    std::lock_guard<std::mutex> lock(encoder_mutex_); // guard encoder access
+    std::lock_guard<std::mutex> lock(encoder_mutex_);
 
+    // Step 1: Get raw frame from camera
     struct v4l2_buffer cap_buf = {};
     cap_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     cap_buf.memory = V4L2_MEMORY_MMAP;
 
-    if (!dequeueBuffer(capture_fd_, &cap_buf, FRAME_TIMEOUT_MS))
+    if (!dequeueBufferNonBlocking(capture_fd_, &cap_buf, FRAME_TIMEOUT_MS))
       return false;
 
+    // Step 2: Immediately queue to encoder (non-blocking)
     struct v4l2_buffer enc_out_buf = {};
     enc_out_buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     enc_out_buf.memory = V4L2_MEMORY_USERPTR;
@@ -212,42 +149,62 @@ public:
     if (ioctl(encoding_fd_, VIDIOC_QBUF, &enc_out_buf) < 0)
     {
       ESP_LOGE(TAG, "Failed to queue buffer to encoder: %s", strerror(errno));
+      ioctl(capture_fd_, VIDIOC_QBUF, &cap_buf);
       return false;
     }
 
+    // Step 3: Try to get encoded frame (non-blocking)
     struct v4l2_buffer enc_cap_buf = {};
     enc_cap_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     enc_cap_buf.memory = V4L2_MEMORY_MMAP;
 
     if (ioctl(encoding_fd_, VIDIOC_DQBUF, &enc_cap_buf) < 0)
     {
+      if (errno == EAGAIN)
+      {
+        // Encoder hasn't finished yet, but camera frame was queued
+        // Requeue camera buffer for next capture
+        ioctl(capture_fd_, VIDIOC_QBUF, &cap_buf);
+        return false;
+      }
       ESP_LOGE(TAG, "Failed to dequeue encoded frame: %s", strerror(errno));
+      ioctl(capture_fd_, VIDIOC_QBUF, &cap_buf);
       return false;
     }
 
-    if (ioctl(capture_fd_, VIDIOC_QBUF, &cap_buf) < 0)
-      ESP_LOGE(TAG, "Failed to requeue camera buffer: %s", strerror(errno));
+    // Step 4: Clean up - requeue camera buffer
+    ioctl(capture_fd_, VIDIOC_QBUF, &cap_buf);
 
+    // Step 5: Dequeue the encoder output buffer (the input we sent)
     struct v4l2_buffer enc_out_debuf = {};
     enc_out_debuf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     enc_out_debuf.memory = V4L2_MEMORY_USERPTR;
     if (ioctl(encoding_fd_, VIDIOC_DQBUF, &enc_out_debuf) < 0)
-      ESP_LOGE(TAG, "Failed to dequeue encoder output buffer: %s", strerror(errno));
+      ESP_LOGW(TAG, "Failed to dequeue encoder output buffer: %s", strerror(errno));
 
-    data = enc_buffer_;
+    // Step 6: Prepare output data
+    data = encoder_capture_buffers_[enc_cap_buf.index];
     size = enc_cap_buf.bytesused;
     sequence = enc_cap_buf.sequence;
 
+    // Step 7: Requeue encoder capture buffer
     struct v4l2_buffer enc_cap_qbuf = {};
     enc_cap_qbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     enc_cap_qbuf.memory = V4L2_MEMORY_MMAP;
-    enc_cap_qbuf.index = 0;
+    enc_cap_qbuf.index = enc_cap_buf.index;
     if (ioctl(encoding_fd_, VIDIOC_QBUF, &enc_cap_qbuf) < 0)
       ESP_LOGE(TAG, "Failed to requeue encoder capture buffer: %s", strerror(errno));
 
     static int frame_count = 0;
     if (++frame_count % 30 == 0)
-      ESP_LOGI(TAG, "Frame %u: %zu bytes (%.1f KB)", sequence, size, size / 1024.0);
+    {
+      static auto last_time = std::chrono::steady_clock::now();
+      auto now = std::chrono::steady_clock::now();
+      float fps = 30.0f / std::chrono::duration<float>(now - last_time).count();
+      last_time = now;
+      ESP_LOGI(TAG, "Frame %u: %zu bytes (%.1f KB) - %.1f FPS",
+               sequence, size, size / 1024.0, fps);
+    }
 
     return true;
   }
@@ -261,11 +218,26 @@ private:
     if (ioctl(capture_fd_, VIDIOC_G_FMT, &fmt) < 0)
     {
       ESP_LOGE(TAG, "Failed to find resolution");
+      width_ = 640;
+      height_ = 480;
+      return;
     }
 
-    ESP_LOGI(TAG, "Found resolution: %dx%d", fmt.fmt.pix.width, fmt.fmt.pix.height);
-    width = fmt.fmt.pix.width;
-    height = fmt.fmt.pix.height;
+    width_ = fmt.fmt.pix.width;
+    height_ = fmt.fmt.pix.height;
+    ESP_LOGI(TAG, "Found resolution: %dx%d", width_, height_);
+  }
+
+  size_t getCaptureBufferSize()
+  {
+    // YUV420: 1.5 bytes per pixel
+    return width_ * height_ * 3 / 2;
+  }
+
+  size_t getEncoderBufferSize()
+  {
+    // H264 compressed buffer - usually 1-2x uncompressed size to be safe
+    return width_ * height_ * 2;
   }
 
   esp_err_t set_control(int fd, uint32_t ctrl_class, uint32_t id, int32_t value, const char *param)
@@ -281,43 +253,38 @@ private:
 
     if (ioctl(fd, VIDIOC_S_EXT_CTRLS, &controls) != 0)
     {
-      ESP_LOGW(TAG, "failed to set control: %s, error: %s", param, strerror(errno));
+      ESP_LOGW(TAG, "Failed to set control %s (value=%d): %s", param, value, strerror(errno));
       return ESP_FAIL;
     }
-    ESP_LOGI(TAG, "setting control: %s, to: %d", param, value);
+    ESP_LOGI(TAG, "Set %s = %d", param, value);
     return ESP_OK;
   }
 
   bool configureEncoder()
   {
-
-    // H264 I-Frame Period 0x00990a66 (int)          : min=1 max=120 step=1 default=30
-    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_I_PERIOD, config_.i_period, "H264_I_PERIOD");
     // Video Bitrate 0x009909cf (int)                : min=25000 max=25000000 step=25000 default=10000000
     set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_BITRATE, config_.bitrate, "BITRATE");
+    // H264 I-Frame Period 0x00990a66 (int)          : min=1 max=120 step=1 default=30
+    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_I_PERIOD, config_.i_period, "H264_I_PERIOD");
+
     // H264 Minimum QP Value 0x00990a61 (int)        : min=0 max=51 step=1 default=25
     set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MIN_QP, config_.quality, "H264_MIN_QP");
-    // H264 Maximum QP Value 0x00990a62 (int)        : min=0 max=51 step=1 default=26
-    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP, config_.quality, "H264_MAX_QP");
+    set_control(encoding_fd_, V4L2_CID_CODEC_CLASS, V4L2_CID_MPEG_VIDEO_H264_MAX_QP, config_.quality + 5, "H264_MAX_QP");
 
     // Exposure 0x00980911 (int)        : min=2 max=235 step=1 default=80
-    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, 90, "V4L2_CID_EXPOSURE");
-    // Vertical Flip 0x00980915 (int)   : min=0 max=1 step=1 default=0
-    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_VFLIP, 1, "V4L2_CID_VFLIP");
-    // Horizontal Flip 0x00980914 (int) : min=0 max=1 step=1 default=0
-    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_HFLIP, 0, "V4L2_CID_HFLIP");
+    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_EXPOSURE, 90, "EXPOSURE");
+    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_VFLIP, 1, "VFLIP");
+    set_control(capture_fd_, V4L2_CTRL_CLASS_USER, V4L2_CID_HFLIP, 0, "HFLIP");
 
     return true;
   }
 
   bool setupCapture()
   {
-
-    // Set capture format
     struct v4l2_format fmt = {};
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = width;
-    fmt.fmt.pix.height = height;
+    fmt.fmt.pix.width = width_;
+    fmt.fmt.pix.height = height_;
     fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
     fmt.fmt.pix.field = V4L2_FIELD_ANY;
 
@@ -327,7 +294,6 @@ private:
       return false;
     }
 
-    // Request buffers
     struct v4l2_requestbuffers req = {};
     req.count = BUFFER_COUNT;
     req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -339,7 +305,6 @@ private:
       return false;
     }
 
-    // Map buffers
     for (int i = 0; i < BUFFER_COUNT; i++)
     {
       struct v4l2_buffer buf = {};
@@ -368,7 +333,6 @@ private:
       }
     }
 
-    // Start capture streaming
     int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (ioctl(capture_fd_, VIDIOC_STREAMON, &type) < 0)
     {
@@ -381,11 +345,10 @@ private:
 
   bool setupEncoderOutput()
   {
-    // Set encoder output format
     struct v4l2_format fmt = {};
     fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-    fmt.fmt.pix.width = width;
-    fmt.fmt.pix.height = height;
+    fmt.fmt.pix.width = width_;
+    fmt.fmt.pix.height = height_;
     fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
 
     if (ioctl(encoding_fd_, VIDIOC_S_FMT, &fmt) < 0)
@@ -394,9 +357,8 @@ private:
       return false;
     }
 
-    // Request buffers
     struct v4l2_requestbuffers req = {};
-    req.count = 1;
+    req.count = ENCODER_BUFFER_COUNT; // Multiple output buffers for pipelining
     req.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     req.memory = V4L2_MEMORY_USERPTR;
 
@@ -411,11 +373,10 @@ private:
 
   bool setupEncoderCapture()
   {
-    // Set encoder capture format (H264 output)
     struct v4l2_format fmt = {};
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = width;
-    fmt.fmt.pix.height = height;
+    fmt.fmt.pix.width = width_;
+    fmt.fmt.pix.height = height_;
     fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_H264;
 
     if (ioctl(encoding_fd_, VIDIOC_S_FMT, &fmt) < 0)
@@ -424,9 +385,8 @@ private:
       return false;
     }
 
-    // Request buffers
     struct v4l2_requestbuffers req = {};
-    req.count = 1;
+    req.count = ENCODER_BUFFER_COUNT; // Multiple capture buffers for pipelining
     req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     req.memory = V4L2_MEMORY_MMAP;
 
@@ -436,31 +396,35 @@ private:
       return false;
     }
 
-    // Map buffer
-    struct v4l2_buffer buf = {};
-    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    buf.memory = V4L2_MEMORY_MMAP;
-    buf.index = 0;
-
-    if (ioctl(encoding_fd_, VIDIOC_QUERYBUF, &buf) < 0)
+    encoder_capture_buffers_.resize(req.count);
+    for (unsigned int i = 0; i < req.count; i++)
     {
-      ESP_LOGE(TAG, "Failed to query encoder capture buffer");
-      return false;
+      struct v4l2_buffer buf = {};
+      buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      buf.memory = V4L2_MEMORY_MMAP;
+      buf.index = i;
+
+      if (ioctl(encoding_fd_, VIDIOC_QUERYBUF, &buf) < 0)
+      {
+        ESP_LOGE(TAG, "Failed to query encoder capture buffer");
+        return false;
+      }
+
+      encoder_capture_buffers_[i] = (uint8_t *)mmap(NULL, buf.length, PROT_READ | PROT_WRITE,
+                                                    MAP_SHARED, encoding_fd_, buf.m.offset);
+      if (encoder_capture_buffers_[i] == MAP_FAILED)
+      {
+        ESP_LOGE(TAG, "Failed to mmap encoder capture buffer");
+        return false;
+      }
+
+      if (ioctl(encoding_fd_, VIDIOC_QBUF, &buf) < 0)
+      {
+        ESP_LOGE(TAG, "Failed to queue encoder capture buffer");
+        return false;
+      }
     }
 
-    enc_buffer_ = (uint8_t *)mmap(NULL, buf.length, PROT_READ | PROT_WRITE,
-                                  MAP_SHARED, encoding_fd_, buf.m.offset);
-    if (enc_buffer_ == MAP_FAILED)
-    {
-      ESP_LOGE(TAG, "Failed to mmap encoder capture buffer");
-      return false;
-    }
-
-    if (ioctl(encoding_fd_, VIDIOC_QBUF, &buf) < 0)
-    {
-      ESP_LOGE(TAG, "Failed to queue encoder capture buffer");
-      return false;
-    }
     return true;
   }
 
@@ -483,39 +447,40 @@ private:
     return true;
   }
 
-  bool dequeueBuffer(int fd, struct v4l2_buffer *buf, int timeout_ms)
+  bool dequeueBufferNonBlocking(int fd, struct v4l2_buffer *buf, int timeout_ms)
   {
+    // Try non-blocking dequeue first
+    if (ioctl(fd, VIDIOC_DQBUF, buf) >= 0)
+      return true;
+
+    if (errno != EAGAIN)
+      return false;
+
+    // Wait with select if no frame immediately available
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
 
     struct timeval tv;
-    tv.tv_sec = timeout_ms / 1000;
-    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    tv.tv_sec = 0;
+    tv.tv_usec = timeout_ms * 1000;
 
     int ret = select(fd + 1, &fds, NULL, NULL, &tv);
     if (ret <= 0)
-    {
       return false;
-    }
 
-    if (ioctl(fd, VIDIOC_DQBUF, buf) < 0)
-    {
-      return false;
-    }
-
-    return true;
+    return ioctl(fd, VIDIOC_DQBUF, buf) >= 0;
   }
 
   std::mutex encoder_mutex_;
   Config config_;
-  int width;
-  int height;
-  int capture_fd_;
-  int encoding_fd_;
-  uint8_t *cap_buffer_[BUFFER_COUNT];
-  uint8_t *enc_buffer_;
-  bool is_initialized_;
+  int width_ = 640;
+  int height_ = 480;
+  int capture_fd_ = -1;
+  int encoding_fd_ = -1;
+  uint8_t *cap_buffer_[BUFFER_COUNT] = {nullptr, nullptr};
+  std::vector<uint8_t *> encoder_capture_buffers_;
+  bool is_initialized_ = false;
   static const char *TAG;
 };
 

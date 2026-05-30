@@ -6,3 +6,4 @@ dependencies:
   espressif/cjson: 1.7.19~2
   espressif/esp_video: 2.1.0
   espressif/esp_board_manager: 0.5.9
+  # espressif/esp_capture: 0.8.4
