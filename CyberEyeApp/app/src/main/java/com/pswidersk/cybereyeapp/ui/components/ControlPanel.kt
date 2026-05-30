@@ -22,10 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,22 +36,13 @@ import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.labelSize
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.titleSize
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_EXPOSURE = 80f
-private const val DEFAULT_QUALITY = 45f
-private const val DEFAULT_BITRATE = 5000f
-
 @Composable
 fun ControlPanel() {
-    var exposure by remember { mutableFloatStateOf(DEFAULT_EXPOSURE) }
-    var quality by remember { mutableFloatStateOf(DEFAULT_QUALITY) }
-    var bitrate by remember { mutableFloatStateOf(DEFAULT_BITRATE) }
     val coroutineScope = rememberCoroutineScope()
+    val settings by AppState.cameraSettings
 
     fun sendUpdateCommand() {
-        val qualityLevel = quality.toInt()
-        val exposureLevel = exposure.toInt()
-        val bitrateLevel = bitrate.toInt()
-        val command = "camera:::qual:$qualityLevel:::exp:$exposureLevel:::bit:$bitrateLevel"
+        val command = settings.toCommand()
         Log.d(TAG, "Sending update command: $command")
         coroutineScope.launch {
             CameraClient.sendCommand(command)
@@ -75,28 +63,28 @@ fun ControlPanel() {
         ControlSlider(
             icon = "☀️",
             label = "Exposure",
-            value = exposure,
-            onValueChange = { exposure = it },
+            value = settings.exposure,
+            onValueChange = { AppState.updateExposure(it) },
             valueRange = 2f..235f
         )
 
         ControlSlider(
             icon = "📊",
             label = "Quality",
-            value = quality,
-            onValueChange = { quality = it },
+            value = settings.quality,
+            onValueChange = { AppState.updateQuality(it) },
             valueRange = 0f..51f
         )
-        QualityLevelIndicator(quality = quality)
+        QualityLevelIndicator(quality = settings.quality)
 
         ControlSlider(
             icon = "📡",
             label = "Bitrate (kbps)",
-            value = bitrate,
-            onValueChange = { bitrate = it },
+            value = settings.bitrate,
+            onValueChange = { AppState.updateBitrate(it) },
             valueRange = 500f..20000f
         )
-        BitrateLevelIndicator(bitrate = bitrate)
+        BitrateLevelIndicator(bitrate = settings.bitrate)
 
         Spacer(modifier = Modifier.height(8.dp))
 

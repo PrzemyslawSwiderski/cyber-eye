@@ -13,6 +13,24 @@ const val DEFAULT_IP = "192.168.1.17"
 const val ACCESS_POINT_IP = "192.168.4.1"
 const val CONTROL_PORT = 3334
 
+data class CameraSettings(
+    val exposure: Float = DEFAULT_EXPOSURE,
+    val quality: Float = DEFAULT_QUALITY,
+    val bitrate: Float = DEFAULT_BITRATE
+) {
+    companion object {
+        const val DEFAULT_EXPOSURE = 80f
+        const val DEFAULT_QUALITY = 45f
+        const val DEFAULT_BITRATE = 5000f
+
+        val DEFAULTS = CameraSettings()
+    }
+
+    fun toCommand(): String {
+        return "camera:::qual:${quality.toInt()}:::exp:${exposure.toInt()}:::bit:${bitrate.toInt()}"
+    }
+}
+
 object AppState {
 
     val cameraIp = mutableStateOf(DEFAULT_IP)
@@ -20,7 +38,12 @@ object AppState {
     val rtpStats = _rtpStats.asStateFlow()
     val cameraStatus = mutableStateOf(Status.PENDING)
     val cameraStats = MutableStateFlow(StatsResponse())
+
+    // Video reload trigger
     val shouldReloadVideo = mutableIntStateOf(0)
+
+    // Camera settings as a single state object
+    val cameraSettings = mutableStateOf(CameraSettings.DEFAULTS)
 
     fun requestVideoReload() {
         shouldReloadVideo.intValue++
@@ -28,5 +51,18 @@ object AppState {
 
     fun updateStats(stats: RtpStats) {
         _rtpStats.value = stats
+    }
+
+    // Convenience methods for updating individual settings
+    fun updateExposure(value: Float) {
+        cameraSettings.value = cameraSettings.value.copy(exposure = value)
+    }
+
+    fun updateQuality(value: Float) {
+        cameraSettings.value = cameraSettings.value.copy(quality = value)
+    }
+
+    fun updateBitrate(value: Float) {
+        cameraSettings.value = cameraSettings.value.copy(bitrate = value)
     }
 }
