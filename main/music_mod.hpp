@@ -1,25 +1,51 @@
 #pragma once
+
 #include "esp_audio_simple_player.h"
 #include "esp_codec_dev.h"
 #include "esp_log.h"
+#include "esp_board_manager.h"
 
 class MusicPlayerMod
 {
 public:
   MusicPlayerMod() : player_handle_(nullptr), playback_dev_(nullptr), is_running_(false) {}
 
-  esp_err_t init(esp_codec_dev_handle_t playback_device)
+  esp_err_t init()
   {
     static const char *TAG = "MusicPlayer";
     ESP_LOGI(TAG, "Initializing music player...");
 
-    if (!playback_device)
+    // Get the audio DAC device handle
+    dev_audio_codec_handles_t *play_dev_handle = NULL;
+    esp_board_manager_get_device_handle(ESP_BOARD_DEVICE_NAME_AUDIO_DAC, (void **)&play_dev_handle);
+    if (play_dev_handle == NULL || play_dev_handle->codec_dev == NULL)
     {
-      ESP_LOGE(TAG, "Invalid playback device");
-      return ESP_ERR_INVALID_ARG;
+      ESP_LOGE(TAG, "Failed to get playback handle");
+      return ESP_FAIL;
     }
 
-    playback_dev_ = playback_device;
+    playback_dev_ = play_dev_handle->codec_dev;
+
+    // Set output volume
+    esp_err_t ret = esp_codec_dev_set_out_vol(playback_dev_, 10);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to set output volume");
+      return ESP_FAIL;
+    }
+
+    // Configure and open the codec
+    esp_codec_dev_sample_info_t fs = {};
+    fs.sample_rate = 48000;
+    fs.channel = 2;
+    fs.bits_per_sample = 16;
+
+    ret = esp_codec_dev_open(playback_dev_, &fs);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to open playback codec");
+      return ESP_FAIL;
+    }
 
     // Configure player
     esp_asp_cfg_t cfg = {};
@@ -34,6 +60,7 @@ public:
     if (err != ESP_OK)
     {
       ESP_LOGE(TAG, "Failed to create player: %d", err);
+      cleanup_codec();
       return ESP_FAIL;
     }
 
@@ -41,10 +68,30 @@ public:
     if (err != ESP_OK)
     {
       ESP_LOGE(TAG, "Failed to set event callback: %d", err);
+      cleanup_codec();
       return ESP_FAIL;
     }
 
     ESP_LOGI(TAG, "Music player initialized successfully");
+    return ESP_OK;
+  }
+
+  esp_err_t set_volume(int volume)
+  {
+    if (!playback_dev_)
+    {
+      ESP_LOGE("MusicPlayer", "Playback device not initialized");
+      return ESP_FAIL;
+    }
+
+    esp_err_t ret = esp_codec_dev_set_out_vol(playback_dev_, volume);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE("MusicPlayer", "Failed to set volume to %d", volume);
+      return ESP_FAIL;
+    }
+
+    ESP_LOGI("MusicPlayer", "Volume set to %d", volume);
     return ESP_OK;
   }
 
@@ -85,37 +132,6 @@ public:
     return err == ESP_OK ? ESP_OK : ESP_FAIL;
   }
 
-  esp_err_t pause()
-  {
-    if (!player_handle_)
-    {
-      return ESP_FAIL;
-    }
-
-    esp_gmf_err_t err = esp_audio_simple_player_pause(player_handle_);
-    if (err == ESP_OK)
-    {
-      ESP_LOGI("MusicPlayer", "Playback paused");
-    }
-    return err == ESP_OK ? ESP_OK : ESP_FAIL;
-  }
-
-  esp_err_t resume()
-  {
-    if (!player_handle_)
-    {
-      return ESP_FAIL;
-    }
-
-    esp_gmf_err_t err = esp_audio_simple_player_resume(player_handle_);
-    if (err == ESP_OK)
-    {
-      is_running_ = true;
-      ESP_LOGI("MusicPlayer", "Playback resumed");
-    }
-    return err == ESP_OK ? ESP_OK : ESP_FAIL;
-  }
-
   esp_asp_state_t get_state()
   {
     if (!player_handle_)
@@ -150,7 +166,7 @@ public:
       ESP_LOGI("MusicPlayer", "Player destroyed");
     }
 
-    playback_dev_ = nullptr;
+    cleanup_codec();
     is_running_ = false;
     return ESP_OK;
   }
@@ -165,6 +181,15 @@ public:
   MusicPlayerMod &operator=(const MusicPlayerMod &) = delete;
 
 private:
+  void cleanup_codec()
+  {
+    if (playback_dev_)
+    {
+      esp_codec_dev_close(playback_dev_);
+      playback_dev_ = nullptr;
+    }
+  }
+
   static int out_data_callback(uint8_t *data, int data_size, void *ctx)
   {
     esp_codec_dev_handle_t dev = static_cast<esp_codec_dev_handle_t>(ctx);

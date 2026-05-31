@@ -24,8 +24,7 @@ public:
     std::atomic<bool> *stream_active;
     struct sockaddr_in *video_client_addr;
     struct sockaddr_in *source_addr;
-    std::function<void()> *deferred_action;
-    V4L2H264Capture *capture; // Direct reference to capture object
+    V4L2H264Capture *capture;
   };
 
   struct Result
@@ -49,82 +48,63 @@ public:
 
   Result process(const char *cmd, const Context &ctx)
   {
+    if (strcmp(cmd, "info") == 0)
+      return handleInfo(ctx);
     if (strcmp(cmd, "start") == 0)
-      return handleStart(ctx);
-    if (strcmp(cmd, "stop") == 0)
-      return handleStop(ctx);
-    if (strcmp(cmd, "reboot") == 0)
-      return handleReboot(ctx);
-    if (strcmp(cmd, "status") == 0)
-      return handleStatus(ctx);
-    if (strcmp(cmd, "wifi_ap") == 0)
-      return handleWifiAP(ctx);
-    if (strncmp(cmd, "wifi_sta", 8) == 0)
-      return handleWifiSTA(cmd, ctx);
-    if (strncmp(cmd, "camera", 6) == 0)
-      return handleCamera(cmd, ctx);
-    if (strcmp(cmd, "stats") == 0)
-      return handleStats();
+      handleStart(ctx);
+    else if (strcmp(cmd, "stop") == 0)
+      handleStop(ctx);
+    else if (strcmp(cmd, "reboot") == 0)
+      handleReboot(ctx);
+    else if (strcmp(cmd, "wifi_ap") == 0)
+      handleWifiAP(ctx);
+    else if (strncmp(cmd, "wifi_sta", 8) == 0)
+      handleWifiSTA(cmd, ctx);
+    else if (strncmp(cmd, "camera", 6) == 0)
+      handleCamera(cmd, ctx);
+    if (strcmp(cmd, "clear_error") == 0)
+      handleClearError(ctx);
+    else
+      last_error_ = "unknown command";
 
-    return {"{\"error\":\"unknown command\"}"};
+    return {nullptr};
   }
 
 private:
   static constexpr const char *TAG = "CMD_PROC";
   temperature_sensor_handle_t temp_sensor_ = nullptr;
-  char stats_buffer_[256] = {};
+  char info_buffer_[512] = {};
+  std::string last_error_;
 
-  Result handleStart(const Context &ctx)
+  void handleStart(const Context &ctx)
   {
-    *ctx.deferred_action = [ctx]()
-    {
-      vTaskDelay(pdMS_TO_TICKS(100));
-      *ctx.video_client_addr = *ctx.source_addr;
-      ctx.stream_active->store(true);
-    };
-    return {"{\"status\":\"ok\"}"};
+    vTaskDelay(pdMS_TO_TICKS(100));
+    *ctx.video_client_addr = *ctx.source_addr;
+    ctx.stream_active->store(true);
   }
 
-  Result handleStop(const Context &ctx)
+  void handleStop(const Context &ctx)
   {
-    *ctx.deferred_action = [ctx]()
-    {
-      ctx.stream_active->store(false);
-    };
-    return {"{\"status\":\"ok\"}"};
+    ctx.stream_active->store(false);
   }
 
-  Result handleReboot(const Context &ctx)
+  void handleReboot(const Context &ctx)
   {
-    *ctx.deferred_action = []()
-    {
-      esp_restart();
-    };
-    return {"{\"status\":\"ok\"}"};
+    esp_restart();
   }
 
-  Result handleStatus(const Context &ctx)
+  void handleWifiAP(const Context &ctx)
   {
-    return {ctx.stream_active->load()
-                ? "{\"status\":\"streaming\"}"
-                : "{\"status\":\"ready\"}"};
+    wifi::set_mode(wifi::Mode::AP);
   }
 
-  Result handleWifiAP(const Context &ctx)
-  {
-    *ctx.deferred_action = []()
-    {
-      wifi::set_mode(wifi::Mode::AP);
-    };
-    return {"{\"status\":\"ok\"}"};
-  }
-
-  Result handleWifiSTA(const char *cmd, const Context &ctx)
+  void handleWifiSTA(const char *cmd, const Context &ctx)
   {
     const char *delim1 = strstr(cmd, ":::");
     if (!delim1)
     {
-      return {"{\"error\":\"wifi_sta requires SSID and password: wifi_sta:::SSID:::PASSWORD\"}"};
+      last_error_ = "wifi_sta requires SSID and password: wifi_sta:::SSID:::PASSWORD";
+      return;
     }
 
     const char *ssid_start = delim1 + 3;
@@ -144,21 +124,18 @@ private:
 
     if (ssid.empty())
     {
-      return {"{\"error\":\"SSID cannot be empty\"}"};
+      last_error_ = "SSID cannot be empty";
+      return;
     }
-
-    *ctx.deferred_action = [ssid = std::move(ssid), password = std::move(password)]()
-    {
-      wifi::set_mode(wifi::Mode::STA, {.ssid = ssid, .password = password});
-    };
-    return {"{\"status\":\"ok\"}"};
+    wifi::set_mode(wifi::Mode::STA, {.ssid = ssid, .password = password});
   }
 
-  Result handleCamera(const char *cmd, const Context &ctx)
+  void handleCamera(const char *cmd, const Context &ctx)
   {
     if (!ctx.capture)
     {
-      return {"{\"error\":\"camera not available\"}"};
+      last_error_ = "camera not available";
+      return;
     }
 
     int quality = -1, exposure = -1;
@@ -166,7 +143,8 @@ private:
 
     if (quality < 0 && exposure < 0)
     {
-      return {"{\"error\":\"no valid parameters. Use: camera:::qual:VALUE:::exp:VALUE\"}"};
+      last_error_ = "no valid parameters. Use: camera:::qual:VALUE:::exp:VALUE";
+      return;
     }
 
     // Apply configuration directly to capture object
@@ -178,12 +156,6 @@ private:
       config.exposure = exposure;
 
     ctx.capture->updateConfig(config);
-
-    snprintf(stats_buffer_, sizeof(stats_buffer_),
-             "{\"status\":\"ok\",\"qual\":%d,\"exp\":%d}",
-             quality >= 0 ? quality : config.quality,
-             exposure >= 0 ? exposure : config.exposure);
-    return {stats_buffer_};
   }
 
   void parseCameraParams(const char *cmd, int &quality, int &exposure)
@@ -209,7 +181,7 @@ private:
     }
   }
 
-  Result handleStats()
+  Result handleInfo(const Context &ctx)
   {
     int64_t now_us = esp_timer_get_time();
 
@@ -223,11 +195,19 @@ private:
     size_t free_mem = esp_get_free_heap_size();
     size_t free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
 
-    snprintf(stats_buffer_, sizeof(stats_buffer_),
-             "{\"time\":%lld,\"temp\":%.2f,\"signal\":%d,\"free_heap\":%zu,\"free_block\":%zu}",
-             now_us, temp, signal, free_mem, free_block);
+    const char *streaming_status = ctx.stream_active->load() ? "streaming" : "ready";
+    const char *last_error = last_error_.empty() ? "" : last_error_.c_str();
 
-    return {stats_buffer_};
+    snprintf(info_buffer_, sizeof(info_buffer_),
+             "{\"time\":%lld,\"temp\":%.2f,\"signal\":%d,\"free_heap\":%zu,\"free_block\":%zu,\"status\":\"%s\",\"last_error\":\"%s\"}",
+             now_us, temp, signal, free_mem, free_block, streaming_status, last_error);
+
+    return {info_buffer_};
+  }
+
+  void handleClearError(const Context &ctx)
+  {
+    last_error_.clear();
   }
 
   void cleanup()

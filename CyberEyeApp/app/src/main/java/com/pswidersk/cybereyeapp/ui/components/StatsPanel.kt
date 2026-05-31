@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -24,25 +22,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pswidersk.cybereyeapp.AppState
-import com.pswidersk.cybereyeapp.CameraClient
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Colors.background
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.labelSize
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.valueSize
-import kotlinx.coroutines.delay
 
 @Composable
 fun StatsPanel() {
     val stats by AppState.rtpStats.collectAsState()
-    val cameraStats by AppState.cameraStats.collectAsState()
-    var rttMs by remember { mutableLongStateOf(0L) }
-
-    // Cancelled automatically when StatsPanel leaves composition
-    LaunchedEffect(Unit) {
-        while (true) {
-            rttMs = CameraClient.fetchStats()
-            delay(1000)
-        }
-    }
+    val cameraInfo by AppState.cameraInfo.collectAsState()
+    var rttMs by remember { AppState.cameraLatency }
 
     Column(
         modifier = Modifier
@@ -86,38 +74,38 @@ fun StatsPanel() {
         )
         StatRow(
             label = "Temp",
-            value = if (cameraStats.temp.isNaN()) "N/A" else "%.1f°C".format(cameraStats.temp),
+            value = if (cameraInfo.temp.isNaN()) "N/A" else "%.1f°C".format(cameraInfo.temp),
             color = when {
-                cameraStats.temp.isNaN() -> Color.White
-                cameraStats.temp < 60f -> Color(0xFF4CAF50)
-                cameraStats.temp < 75f -> Color(0xFFFF9800)
+                cameraInfo.temp.isNaN() -> Color.White
+                cameraInfo.temp < 60f -> Color(0xFF4CAF50)
+                cameraInfo.temp < 75f -> Color(0xFFFF9800)
                 else -> Color(0xFFF44336)
             }
         )
         StatRow(
             label = "Signal",
-            value = "${cameraStats.signal} dBm",
+            value = "${cameraInfo.signal} dBm",
             color = when {
-                cameraStats.signal >= -60 -> Color(0xFF4CAF50)
-                cameraStats.signal >= -75 -> Color(0xFFFF9800)
+                cameraInfo.signal >= -60 -> Color(0xFF4CAF50)
+                cameraInfo.signal >= -75 -> Color(0xFFFF9800)
                 else -> Color(0xFFF44336)
             }
         )
         StatRow(
             label = "Heap",
-            value = "${cameraStats.freeHeap / 1024} kB",
+            value = "${cameraInfo.freeHeap / 1024} kB",
             color = when {
-                cameraStats.freeHeap > 100_000 -> Color(0xFF4CAF50)
-                cameraStats.freeHeap > 50_000 -> Color(0xFFFF9800)
+                cameraInfo.freeHeap > 100_000 -> Color(0xFF4CAF50)
+                cameraInfo.freeHeap > 50_000 -> Color(0xFFFF9800)
                 else -> Color(0xFFF44336)
             }
         )
         StatRow(
             label = "Block",
-            value = "${cameraStats.freeBlock / 1024} kB",
+            value = "${cameraInfo.freeBlock / 1024} kB",
             color = when {
-                cameraStats.freeBlock > 50_000 -> Color(0xFF4CAF50)
-                cameraStats.freeBlock > 20_000 -> Color(0xFFFF9800)
+                cameraInfo.freeBlock > 50_000 -> Color(0xFF4CAF50)
+                cameraInfo.freeBlock > 20_000 -> Color(0xFFFF9800)
                 else -> Color(0xFFF44336)
             }
         )

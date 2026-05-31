@@ -278,17 +278,14 @@ private:
 
         if (cmd_processor_)
         {
-          std::function<void()> deferred_action;
-          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, &deferred_action, capture_};
+          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, capture_};
           auto result = cmd_processor_->process(buffer, ctx);
-          ESP_LOGI(TAG, "Control response: %s", result.response);
 
-          sendto(sock, result.response, strlen(result.response), 0,
-                 (struct sockaddr *)&source_addr, sizeof(source_addr));
-
-          if (deferred_action)
+          if (result.response)
           {
-            deferred_action();
+            ESP_LOGI(TAG, "Sending response: %s", result.response);
+            sendto(sock, result.response, strlen(result.response), 0,
+                   (struct sockaddr *)&source_addr, sizeof(source_addr));
           }
         }
       }

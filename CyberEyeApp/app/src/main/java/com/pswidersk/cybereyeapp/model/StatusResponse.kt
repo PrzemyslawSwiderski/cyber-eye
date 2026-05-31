@@ -4,6 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class StatusResponse(
-    val status: Status = Status.UNKNOWN,
+    val status: CameraStatus = CameraStatus.UNKNOWN,
     val error: String? = null
 )

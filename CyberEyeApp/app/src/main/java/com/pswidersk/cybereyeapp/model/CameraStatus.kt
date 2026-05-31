@@ -2,7 +2,7 @@ package com.pswidersk.cybereyeapp.model
 
 import kotlinx.serialization.SerialName
 
-enum class Status {
+enum class CameraStatus {
     @SerialName("ok")
     OK,
 

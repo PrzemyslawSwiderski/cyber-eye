@@ -1,10 +1,11 @@
 package com.pswidersk.cybereyeapp
 
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.pswidersk.cybereyeapp.h264.RtpStats
-import com.pswidersk.cybereyeapp.model.StatsResponse
-import com.pswidersk.cybereyeapp.model.Status
+import com.pswidersk.cybereyeapp.model.CameraInfoResponse
+import com.pswidersk.cybereyeapp.model.CameraStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -33,8 +34,9 @@ object AppState {
     val cameraIp = mutableStateOf(DEFAULT_IP)
     private val _rtpStats = MutableStateFlow(RtpStats(0f, 0f, 0f, 0f))
     val rtpStats = _rtpStats.asStateFlow()
-    val cameraStatus = mutableStateOf(Status.PENDING)
-    val cameraStats = MutableStateFlow(StatsResponse())
+    val cameraInfo = MutableStateFlow(CameraInfoResponse())
+
+    val cameraLatency = mutableLongStateOf(0L)
 
     // Video reload trigger
     val shouldReloadVideo = mutableIntStateOf(0)

@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pswidersk.cybereyeapp.h264.H264Decoder
 import com.pswidersk.cybereyeapp.h264.RtpReceiver
-import com.pswidersk.cybereyeapp.model.Status
+import com.pswidersk.cybereyeapp.model.CameraStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -19,13 +19,8 @@ class VideoViewModel : ViewModel() {
         isStreaming = true
 
         viewModelScope.launch(Dispatchers.IO) {
-            val response = CameraClient.startVideo()
-            if (response.status == Status.OK) {
-                rtpReceiver.start { decoder.decode(it) }
-            } else {
-                isStreaming = false
-                Log.e(TAG, "Failed to start video: ${response.status}")
-            }
+            CameraClient.startVideo()
+            rtpReceiver.start { decoder.decode(it) }
         }
     }
 
@@ -39,13 +34,4 @@ class VideoViewModel : ViewModel() {
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        viewModelScope.launch(Dispatchers.IO) {
-            if (isStreaming) {
-                CameraClient.sendCommand("stop")
-                rtpReceiver.stop()
-            }
-        }
-    }
 }

@@ -2,9 +2,7 @@ package com.pswidersk.cybereyeapp
 
 import android.util.Log
 import com.pswidersk.cybereyeapp.AppState.cameraIp
-import com.pswidersk.cybereyeapp.model.StatsResponse
-import com.pswidersk.cybereyeapp.model.Status
-import com.pswidersk.cybereyeapp.model.StatusResponse
+import com.pswidersk.cybereyeapp.model.CameraInfoResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.DeserializationStrategy
@@ -13,7 +11,10 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
 
-private val json = Json { ignoreUnknownKeys = true }
+private val json = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+}
 
 private const val DEFAULT_TIMEOUT = 2000
 
@@ -32,35 +33,44 @@ object CameraClient {
         }
     }
 
-    suspend fun sendCommand(command: String): Boolean {
-        val response = requestCommand(command, StatusResponse.serializer(), StatusResponse())
-        return response.status == Status.OK
+    suspend fun sendCommand(
+        command: String,
+        sourceSocket: DatagramSocket = controlSocket
+    ) = withContext(Dispatchers.IO) {
+        val addr = InetSocketAddress(cameraIp.value, CONTROL_PORT)
+        val data = command.toByteArray()
+
+        try {
+            sourceSocket.send(DatagramPacket(data, data.size, addr))
+        } catch (ex: Exception) {
+            Log.e(TAG, "Error response for '$command'", ex)
+        }
     }
 
-    suspend fun startVideo(): StatusResponse = withContext(Dispatchers.IO) {
+    suspend fun startVideo() = withContext(Dispatchers.IO) {
         // stop any existing stream
-        requestCommand(
+        sendCommand(
             "stop",
-            StatusResponse.serializer(),
-            StatusResponse(),
             controlSocket
         )
 
         val freshVideoSocket = resetVideoSocket()
-        return@withContext requestCommand(
+        sendCommand(
             "start",
-            StatusResponse.serializer(),
-            StatusResponse(),
             freshVideoSocket
         )
     }
 
-    suspend fun fetchStats(): Long {
+    suspend fun fetchCameraInfo() {
         val sentAt = System.currentTimeMillis()
-        val stats = requestCommand("stats", StatsResponse.serializer(), StatsResponse())
-        val rttMs = System.currentTimeMillis() - sentAt
-        AppState.cameraStats.value = stats
-        return rttMs
+        val cameraInfoResponse = requestCommand(
+            "info",
+            CameraInfoResponse.serializer(),
+            CameraInfoResponse()
+        )
+        val latencyMs = System.currentTimeMillis() - sentAt
+        AppState.cameraInfo.value = cameraInfoResponse
+        AppState.cameraLatency.longValue = latencyMs
     }
 
     fun fillVideoBuffer(packet: DatagramPacket) {
@@ -71,18 +81,17 @@ object CameraClient {
         command: String,
         deserializer: DeserializationStrategy<T>,
         default: T,
-        sourceSocket: DatagramSocket? = null
+        sourceSocket: DatagramSocket = controlSocket
     ): T = withContext(Dispatchers.IO) {
-        val socket = sourceSocket ?: controlSocket
         val addr = InetSocketAddress(cameraIp.value, CONTROL_PORT)
         val data = command.toByteArray()
 
         try {
-            socket.send(DatagramPacket(data, data.size, addr))
+            sourceSocket.send(DatagramPacket(data, data.size, addr))
 
             val buf = ByteArray(4096)
             val reply = DatagramPacket(buf, buf.size)
-            socket.receive(reply)
+            sourceSocket.receive(reply)
 
             val raw = String(reply.data, 0, reply.length, Charsets.UTF_8)
             Log.d(TAG, "Command '$command' → $raw")

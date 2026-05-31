@@ -71,8 +71,4 @@ class VideoActivity : ComponentActivity() {
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-        viewModel.stopVideo()
-    }
 }
