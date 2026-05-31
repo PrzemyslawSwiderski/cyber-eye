@@ -1,0 +1,19 @@
+### List files
+curl http://192.168.1.17:8080/api/files/list
+
+### List files
+GET http://192.168.1.17:8080/api/files/list
+
+Accept: application/json
+
+### Download mp3 file
+GET http://192.168.1.17:8080/api/files/download?file=test.mp3
+
+### Download file
+curl -o ~/downloaded.txt http://192.168.1.17:8080/api/files/download?file=NIHAO.TXT
+
+### Upload file
+curl -X POST --data-binary @HELLO_2.txt http://192.168.1.17:8080/api/files/upload?file=HELLO_2.txt
+
+### Delete file
+curl -X DELETE http://192.168.1.17:8080/api/files/delete?file=TEST.txt

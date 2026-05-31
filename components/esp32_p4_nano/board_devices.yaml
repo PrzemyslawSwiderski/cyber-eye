@@ -50,22 +50,66 @@ devices:
   - name: fs_sdcard
     type: fs_fat
     version: default
-    sub_type: sdmmc
+    sub_type: spi 
     config:
+      mount_point: "/sdcard"
+      vfs_config:
+        format_if_mount_failed: false
+        max_files: 5
+        allocation_unit_size: 16384
       sub_config:
-        slot: SDMMC_HOST_SLOT_0
-        frequency: SDMMC_FREQ_HIGHSPEED
-        bus_width: 4
-        # If using slot 0, the pin must be configured as 0, the IO pins actually used are configured by the SDMMC driver
-        # For more details, please check https://github.com/espressif/esp-idf/blob/v5.5.1/components/esp_driver_sdmmc/src/sdmmc_host.c#L668
-        pins:
-          clk: 43
-          cmd: 44
-          d0: 39
-          d1: 40
-          d2: 41
-          d3: 42
-        ldo_chan_id: 4 # Use LDO_VO4 to power SDMMC IO
+        cs_gpio_num: 42
+
+    peripherals:
+      - name: spi_2
+      - name: ldo_3v3
+
+  # - name: fs_sdcard
+  #   type: fs_fat
+  #   version: default
+  #   sub_type: sdmmc
+  #   config:
+  #     mount_point: "/sdcard"
+  #     vfs_config:
+  #       format_if_mount_failed: false
+  #       max_files: 5
+  #       allocation_unit_size: 16384
+  #     sub_config:
+  #       slot: SDMMC_HOST_SLOT_0  # Use Slot 1 (Slot 0 for ESP-Hosted)
+  #       frequency: SDMMC_FREQ_HIGHSPEED
+  #       bus_width: 4
+  #       pins:
+  #         clk: 18
+  #         cmd: 19
+  #         d0: 14
+  #         d1: 15
+  #         d2: 16
+  #         d3: 17
+  #       ldo_chan_id: 4
+
+
+  # - name: fs_sdcard
+  #   type: fs_fat
+  #   version: default
+  #   sub_type: sdmmc
+  #   config:
+  #     mount_point: "/sdcard"
+  #     vfs_config:
+  #       format_if_mount_failed: false
+  #       max_files: 5
+  #       allocation_unit_size: 16384
+  #     sub_config:
+  #       slot: SDMMC_HOST_SLOT_0  # Use Slot 1 (Slot 0 for ESP-Hosted)
+  #       frequency: SDMMC_FREQ_HIGHSPEED
+  #       bus_width: 4
+  #       pins:
+  #         clk: 43
+  #         cmd: 44
+  #         d0: 39
+  #         d1: 40
+  #         d2: 41
+  #         d3: 42
+  #       ldo_chan_id: 4
 
   - name: camera
     type: camera
