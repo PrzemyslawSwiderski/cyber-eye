@@ -63,7 +63,11 @@ fun CameraStatusSection() {
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.width(15.dp))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             OutlinedButton(
                 onClick = {
                     coroutineScope.launch {

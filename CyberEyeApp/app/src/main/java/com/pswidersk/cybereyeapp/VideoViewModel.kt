@@ -1,11 +1,9 @@
 package com.pswidersk.cybereyeapp
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pswidersk.cybereyeapp.h264.H264Decoder
 import com.pswidersk.cybereyeapp.h264.RtpReceiver
-import com.pswidersk.cybereyeapp.model.CameraStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

@@ -27,7 +27,7 @@ public:
     playback_dev_ = play_dev_handle->codec_dev;
 
     // Set output volume
-    esp_err_t ret = esp_codec_dev_set_out_vol(playback_dev_, 10);
+    esp_err_t ret = esp_codec_dev_set_out_vol(playback_dev_, 80);
     if (ret != ESP_OK)
     {
       ESP_LOGE(TAG, "Failed to set output volume");

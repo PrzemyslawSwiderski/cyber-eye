@@ -7,6 +7,7 @@
 #include "driver/temperature_sensor.h"
 #include "wifi_mod.hpp"
 #include "video_mod.hpp"
+#include "music_mod.hpp"
 #include <atomic>
 #include <cstdlib>
 #include <functional>
@@ -39,6 +40,12 @@ public:
     {
       temperature_sensor_enable(temp_sensor_);
     }
+
+    // Initialize music player
+    if (music_player_.init() != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to initialize music player");
+    }
   }
 
   ~CmdProcessor()
@@ -62,8 +69,14 @@ public:
       handleWifiSTA(cmd, ctx);
     else if (strncmp(cmd, "camera", 6) == 0)
       handleCamera(cmd, ctx);
-    if (strcmp(cmd, "clear_error") == 0)
+    else if (strcmp(cmd, "clear_error") == 0)
       handleClearError(ctx);
+    else if (strcmp(cmd, "music_stop") == 0)
+      handleMusicStop(ctx);
+    else if (strncmp(cmd, "music_play", 10) == 0)
+      handleMusicPlay(cmd, ctx);
+    else if (strncmp(cmd, "music_volume", 12) == 0)
+      handleMusicVolume(cmd, ctx);
     else
       last_error_ = "unknown command";
 
@@ -75,6 +88,7 @@ private:
   temperature_sensor_handle_t temp_sensor_ = nullptr;
   char info_buffer_[512] = {};
   std::string last_error_;
+  MusicPlayerMod music_player_;
 
   void handleStart(const Context &ctx)
   {
@@ -158,6 +172,55 @@ private:
     ctx.capture->updateConfig(config);
   }
 
+  void handleMusicPlay(const char *cmd, const Context &ctx)
+  {
+    const char *delim = strstr(cmd, ":::");
+    if (!delim || strlen(delim + 3) == 0)
+    {
+      last_error_ = "music_play requires a file path: music_play:::FILE_PATH";
+      return;
+    }
+
+    std::string file_path(delim + 3);
+    esp_err_t ret = music_player_.play(file_path.c_str());
+    if (ret != ESP_OK)
+    {
+      last_error_ = "failed to start music playback";
+    }
+  }
+
+  void handleMusicStop(const Context &ctx)
+  {
+    esp_err_t ret = music_player_.stop();
+    if (ret != ESP_OK)
+    {
+      last_error_ = "failed to stop music playback";
+    }
+  }
+
+  void handleMusicVolume(const char *cmd, const Context &ctx)
+  {
+    const char *delim = strstr(cmd, ":::");
+    if (!delim || strlen(delim + 3) == 0)
+    {
+      last_error_ = "music_volume requires a value: music_volume:::VOLUME";
+      return;
+    }
+
+    int volume = atoi(delim + 3);
+    if (volume < 0 || volume > 100)
+    {
+      last_error_ = "volume must be between 0 and 100";
+      return;
+    }
+
+    esp_err_t ret = music_player_.set_volume(volume);
+    if (ret != ESP_OK)
+    {
+      last_error_ = "failed to set volume";
+    }
+  }
+
   void parseCameraParams(const char *cmd, int &quality, int &exposure)
   {
     const char *pos = cmd;
@@ -218,5 +281,7 @@ private:
       temperature_sensor_uninstall(temp_sensor_);
       temp_sensor_ = nullptr;
     }
+
+    music_player_.deinit();
   }
 };

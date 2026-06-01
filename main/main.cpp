@@ -71,49 +71,10 @@ extern "C" void app_main(void)
   {
     ESP_LOGI("MAIN", "File server running at http://[IP]:8080");
   }
-
-  esp_codec_dev_handle_t out_handle = NULL;
-  dev_audio_codec_handles_t *play_dev_handle = NULL;
-
-  esp_board_manager_get_device_handle(ESP_BOARD_DEVICE_NAME_AUDIO_DAC, (void **)&play_dev_handle);
-  if (play_dev_handle == NULL || play_dev_handle->codec_dev == NULL)
+  else
   {
-    ESP_LOGE(TAG, "Failed to get playback handle");
-    return;
-  }
-
-  out_handle = play_dev_handle->codec_dev; // Direct assignment, no dereferencing
-
-  esp_err_t ret = esp_codec_dev_set_out_vol(out_handle, 10); // Pass the handle directly
-  if (ret != ESP_OK)
-  {
-    ESP_LOGE(TAG, "Failed to set output volume");
-    return;
-  }
-
-  esp_codec_dev_sample_info_t fs = {};
-  fs.sample_rate = 48000;
-  fs.channel = 2;
-  fs.bits_per_sample = 16;
-
-  ret = esp_codec_dev_open(out_handle, &fs); // Pass the handle directly
-  if (ret != ESP_OK)
-  {
-    ESP_LOGE(TAG, "Failed to open playback codec");
-    return;
-  }
-
-  MusicPlayerMod player;
-
-  // Initialize with your playback device
-  if (player.init(out_handle) != ESP_OK) // Pass the handle directly, not a pointer to it
-  {
-    ESP_LOGE("APP", "Failed to initialize music player");
-    return;
-  }
-
-  // Play MP3 file from SD card
-  player.play("file://sdcard/test.mp3");
+    ESP_LOGE("MAIN", "Failed to start file server");
+  };
 
   // // Let it play for 10 seconds
   // vTaskDelay(pdMS_TO_TICKS(10000));

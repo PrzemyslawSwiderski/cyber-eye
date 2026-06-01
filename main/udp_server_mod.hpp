@@ -2,36 +2,49 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/semphr.h"
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
-#include "lwip/igmp.h"
 #include "esp_timer.h"
 #include "esp_system.h"
-#include "esp_err.h"
-#include "esp_netif.h"
+#include "esp_log.h"
 
-// Clear the LwIP definitions of these macros
+// Clear LwIP macro conflicts
 #undef _IO
 #undef _IOR
 #undef _IOW
 #undef _IOWR
+
 #include "video_mod.hpp"
 #include "rtp_packetizer_mod.hpp"
 #include "cmd_process_mod.hpp"
+
+// Forward declarations
+class V4L2H264Capture;
+
+// Define structs outside the class to avoid initialization order issues
+struct UDPH264StreamerConfig
+{
+  uint16_t data_destination_port = 59227;
+  uint16_t control_port = 3334;
+  int task_priority = 20;
+  int task_stack_size = 8 * 1024;
+  int control_task_stack_size = 4 * 1024;
+};
+
+struct UDPH264StreamerTasks
+{
+  TaskHandle_t data = nullptr;
+  TaskHandle_t control = nullptr;
+};
 
 class UDPH264Streamer
 {
 public:
   static constexpr int SEND_MAX_RETRIES = 5;
+  static constexpr int TOS_LOW_DELAY = 0xB8; // AF (Assured Forwarding)
 
-  struct Config
-  {
-    uint16_t data_destination_port = 59227; // Port for video data
-    uint16_t control_port = 3334;           // Port for control commands
-    int task_priority = 20;                 // FreeRTOS task priority
-    int task_stack_size = 8 * 1024;         // Stack size in bytes
-  };
+  using Config = UDPH264StreamerConfig;
+  using Tasks = UDPH264StreamerTasks;
 
   static esp_err_t start(V4L2H264Capture *capture, const Config &config)
   {
@@ -49,44 +62,19 @@ public:
 
     capture_ = capture;
     config_ = config;
+    video_client_addr_ = {};
+    stream_active_ = false;
+
+    // Initialize components
+    cmd_processor_ = std::make_unique<CmdProcessor>();
+    rtp_packetizer_ = std::make_unique<RTPPacketizer>(esp_random());
+
     is_running_ = true;
-    memset(&video_client_addr_, 0, sizeof(video_client_addr_));
 
-    // Initialize command processor
-    cmd_processor_ = new CmdProcessor();
-
-    // Initialize RTP packetizer if enabled
-    rtp_packetizer_ = new RTPPacketizer(esp_random());
-
-    auto control_task_stack_size = 4 * 1024;
-    // Start control task (handles start/stop/status commands)
-    BaseType_t ret = xTaskCreatePinnedToCore(controlTask, "udp_control",
-                                             control_task_stack_size,
-                                             nullptr,
-                                             config_.task_priority + 1,
-                                             &control_task_handle_,
-                                             1);
-
-    if (ret != pdPASS)
+    // Create tasks
+    if (!createTasks())
     {
-      ESP_LOGE(TAG, "Failed to create control task");
-      is_running_ = false;
-      return ESP_FAIL;
-    }
-
-    // Start data task (sends video frames)
-    ret = xTaskCreatePinnedToCore(dataTask, "udp_data",
-                                  config_.task_stack_size,
-                                  nullptr,
-                                  config_.task_priority,
-                                  &data_task_handle_,
-                                  1);
-
-    if (ret != pdPASS)
-    {
-      ESP_LOGE(TAG, "Failed to create data task");
-      is_running_ = false;
-      vTaskDelete(control_task_handle_);
+      cleanup();
       return ESP_FAIL;
     }
 
@@ -97,232 +85,251 @@ public:
   static void stop()
   {
     if (!is_running_)
-    {
       return;
-    }
 
     is_running_ = false;
 
-    // Cleanup command processor
-    if (cmd_processor_)
-    {
-      delete cmd_processor_;
-      cmd_processor_ = nullptr;
-    }
+    // Give tasks time to finish
+    vTaskDelay(pdMS_TO_TICKS(200));
 
-    // Cleanup RTP packetizer
-    if (rtp_packetizer_)
-    {
-      delete rtp_packetizer_;
-      rtp_packetizer_ = nullptr;
-    }
-
-    // Wait for tasks to finish
-    if (data_task_handle_)
-    {
-      vTaskDelay(pdMS_TO_TICKS(100));
-      data_task_handle_ = nullptr;
-    }
-
-    if (control_task_handle_)
-    {
-      vTaskDelay(pdMS_TO_TICKS(100));
-      control_task_handle_ = nullptr;
-    }
-
+    cleanup();
     ESP_LOGI(TAG, "Streamer stopped");
   }
 
 private:
-  static void sendFrame(int sock, const uint8_t *data, size_t size, struct sockaddr_in *destination_addr)
+  static bool createTasks()
   {
-    // Packetize the frame
+    // Create control task with higher priority
+    BaseType_t ret = xTaskCreatePinnedToCore(
+        controlTask, "udp_control", config_.control_task_stack_size,
+        nullptr, config_.task_priority + 1, &tasks_.control, 1);
+
+    if (ret != pdPASS)
+    {
+      ESP_LOGE(TAG, "Failed to create control task");
+      return false;
+    }
+
+    // Create data task
+    ret = xTaskCreatePinnedToCore(
+        dataTask, "udp_data", config_.task_stack_size,
+        nullptr, config_.task_priority, &tasks_.data, 1);
+
+    if (ret != pdPASS)
+    {
+      ESP_LOGE(TAG, "Failed to create data task");
+      vTaskDelete(tasks_.control);
+      tasks_.control = nullptr;
+      return false;
+    }
+
+    return true;
+  }
+
+  static void cleanup()
+  {
+    cmd_processor_.reset();
+    rtp_packetizer_.reset();
+    tasks_.data = nullptr;
+    tasks_.control = nullptr;
+  }
+
+  static int createAndConfigureSocket(uint16_t port = 0, bool bind_socket = false)
+  {
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (sock < 0)
+    {
+      ESP_LOGE(TAG, "Failed to create socket: errno=%d", errno);
+      return -1;
+    }
+
+    // Set TOS for low delay on data sockets
+    if (!bind_socket)
+    {
+      setsockopt(sock, IPPROTO_IP, IP_TOS, &TOS_LOW_DELAY, sizeof(TOS_LOW_DELAY));
+    }
+
+    // Bind if requested
+    if (bind_socket)
+    {
+      struct sockaddr_in addr = {};
+      addr.sin_family = AF_INET;
+      addr.sin_addr.s_addr = htonl(INADDR_ANY);
+      addr.sin_port = htons(port);
+
+      if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+      {
+        ESP_LOGE(TAG, "Failed to bind socket to port %d", port);
+        close(sock);
+        return -1;
+      }
+    }
+
+    return sock;
+  }
+
+  static void sendFrame(int sock, const uint8_t *data, size_t size, const struct sockaddr_in &dest)
+  {
+    if (!rtp_packetizer_)
+      return;
+
     uint64_t ts_us = esp_timer_get_time();
-    std::vector<std::vector<uint8_t>> packets = rtp_packetizer_->packetize(data, size, ts_us);
+    auto packets = rtp_packetizer_->packetize(data, size, ts_us);
 
     for (size_t i = 0; i < packets.size(); i++)
     {
-      const auto &packet = packets[i];
-      int sent = -1;
-      int retries = 0;
+      if (!sendPacket(sock, packets[i], dest, i, packets.size()))
+        return;
+    }
+  }
 
-      while (retries <= SEND_MAX_RETRIES)
+  static bool sendPacket(int sock, const std::vector<uint8_t> &packet,
+                         const struct sockaddr_in &dest, size_t index, size_t total)
+  {
+    int retries = 0;
+
+    while (retries <= SEND_MAX_RETRIES)
+    {
+      int sent = sendto(sock, packet.data(), packet.size(), 0,
+                        (const struct sockaddr *)&dest, sizeof(dest));
+
+      if (sent > 0)
+        return true;
+
+      if (errno == ENOMEM || errno == ENOBUFS)
       {
-        sent = sendto(sock, packet.data(), packet.size(), 0,
-                      (struct sockaddr *)destination_addr, sizeof(*destination_addr));
-        if (sent > 0)
-          break;
-
-        if (errno == ENOMEM || errno == ENOBUFS)
-        {
-          taskYIELD();
-          retries++;
-        }
-        else
-        {
-          ESP_LOGE(TAG, "Send error (packet %zu/%zu): errno=%d", i + 1, packets.size(), errno);
-          return;
-        }
+        taskYIELD();
+        retries++;
       }
-
-      if (sent <= 0)
+      else
       {
-        ESP_LOGE(TAG, "Dropped packet %zu/%zu after %d retries (pool exhausted)",
-                 i + 1, packets.size(), SEND_MAX_RETRIES);
+        ESP_LOGE(TAG, "Send error (packet %zu/%zu): errno=%d", index + 1, total, errno);
+        return false;
       }
     }
+
+    ESP_LOGE(TAG, "Dropped packet %zu/%zu after %d retries", index + 1, total, SEND_MAX_RETRIES);
+    return false;
   }
 
   static void dataTask(void *pvParameters)
   {
-    capture_->init();
+    if (!capture_ || !rtp_packetizer_)
+    {
+      vTaskDelete(NULL);
+      return;
+    }
 
-    int sock = -1;
-
-    // Create UDP socket
-    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    int sock = createAndConfigureSocket();
     if (sock < 0)
     {
-      ESP_LOGE(TAG, "Unable to create data socket");
+      vTaskDelete(NULL);
+      return;
     }
 
-    // Set TOS for low delay
-    int tos = 0xB8; // AF (Assured Forwarding) for video
-    if (setsockopt(sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos)) < 0)
-    {
-      ESP_LOGW(TAG, "Failed to set TOS");
-    }
-
-    // Reset RTP sequence when starting
-    if (rtp_packetizer_)
-    {
-      rtp_packetizer_->resetSequence();
-    }
-
-    if (capture_->start() != ESP_OK)
+    if (capture_->init() != ESP_OK || capture_->start() != ESP_OK)
     {
       ESP_LOGE(TAG, "Failed to start video capture");
+      close(sock);
+      vTaskDelete(NULL);
+      return;
     }
+
+    rtp_packetizer_->resetSequence();
+    ESP_LOGI(TAG, "Data task started");
 
     while (is_running_)
     {
-      if (stream_active_.load())
+      if (!stream_active_)
       {
-        uint8_t *frame_data = nullptr;
-        size_t frame_size = 0;
-        uint32_t sequence;
+        vTaskDelay(pdMS_TO_TICKS(100));
+        continue;
+      }
 
-        if (capture_->captureFrame(frame_data, frame_size, sequence))
-        {
-          sendFrame(sock, frame_data, frame_size, &video_client_addr_);
-        }
-        else
-        {
-          ESP_LOGW(TAG, "Could not capture frame");
-          vTaskDelay(pdMS_TO_TICKS(10));
-        }
+      uint8_t *frame_data = nullptr;
+      size_t frame_size = 0;
+      uint32_t sequence;
+
+      if (capture_->captureFrame(frame_data, frame_size, sequence))
+      {
+        sendFrame(sock, frame_data, frame_size, video_client_addr_);
       }
       else
       {
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(10));
       }
     }
 
-    ESP_LOGI(TAG, "dataTask closing.");
-
-    if (sock >= 0)
-    {
-      close(sock);
-    }
-    data_task_handle_ = nullptr;
+    ESP_LOGI(TAG, "Data task closing");
+    close(sock);
     vTaskDelete(NULL);
   }
 
   static void controlTask(void *pvParameters)
   {
-    int sock = -1;
-    struct sockaddr_in dest_addr = {};
-    struct sockaddr_in source_addr = {};
-    socklen_t socklen = sizeof(source_addr);
-
-    dest_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(config_.control_port);
-
-    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    int sock = createAndConfigureSocket(config_.control_port, true);
     if (sock < 0)
     {
-      ESP_LOGE(TAG, "Unable to create control socket");
-    }
-
-    if (bind(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0)
-    {
-      ESP_LOGE(TAG, "Unable to bind control socket");
+      vTaskDelete(NULL);
+      return;
     }
 
     ESP_LOGI(TAG, "Control server bound to port %d", config_.control_port);
+
     char buffer[256];
+    struct sockaddr_in source_addr;
+    socklen_t addr_len = sizeof(source_addr);
 
     while (is_running_)
     {
       int len = recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
-                         (struct sockaddr *)&source_addr, &socklen);
+                         (struct sockaddr *)&source_addr, &addr_len);
 
       if (len > 0)
       {
         buffer[len] = '\0';
-
-        char source_ip[16];
-        inet_ntoa_r(source_addr.sin_addr, source_ip, sizeof(source_ip));
-        ESP_LOGI(TAG, "Command \"%s\" from %s:%d", buffer, source_ip, ntohs(source_addr.sin_port));
-
-        if (cmd_processor_)
-        {
-          CmdProcessor::Context ctx{&stream_active_, &video_client_addr_, &source_addr, capture_};
-          auto result = cmd_processor_->process(buffer, ctx);
-
-          if (result.response)
-          {
-            ESP_LOGI(TAG, "Sending response: %s", result.response);
-            sendto(sock, result.response, strlen(result.response), 0,
-                   (struct sockaddr *)&source_addr, sizeof(source_addr));
-          }
-        }
+        processCommand(sock, buffer, source_addr);
       }
 
       vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    if (sock >= 0)
-    {
-      close(sock);
-    }
-    control_task_handle_ = nullptr;
+    close(sock);
     vTaskDelete(NULL);
   }
 
-  static const char *TAG;
-  static TaskHandle_t data_task_handle_;
-  static TaskHandle_t control_task_handle_;
-  static bool is_running_;
-  static std::atomic<bool> stream_active_;
-  static struct sockaddr_in video_client_addr_;
-  static V4L2H264Capture *capture_;
-  static Config config_;
-  static SemaphoreHandle_t stream_mutex_;
-  static CmdProcessor *cmd_processor_;
-  static RTPPacketizer *rtp_packetizer_;
+  static void processCommand(int sock, const char *command, struct sockaddr_in &source_addr)
+  {
+    char source_ip[16];
+    inet_ntoa_r(source_addr.sin_addr, source_ip, sizeof(source_ip));
+    ESP_LOGI(TAG, "Command \"%s\" from %s:%d", command, source_ip, ntohs(source_addr.sin_port));
+
+    if (!cmd_processor_)
+      return;
+
+    CmdProcessor::Context ctx;
+    ctx.stream_active = &stream_active_;
+    ctx.video_client_addr = &video_client_addr_;
+    ctx.source_addr = &source_addr;
+    ctx.capture = capture_;
+
+    auto result = cmd_processor_->process(command, ctx);
+
+    if (result.response)
+    {
+      sendto(sock, result.response, strlen(result.response), 0,
+             (const struct sockaddr *)&source_addr, sizeof(source_addr));
+    }
+  }
+
+  // Static members
+  static constexpr const char *TAG = "UDP_H264";
+  static inline bool is_running_ = false;
+  static inline std::atomic<bool> stream_active_ = false;
+  static inline V4L2H264Capture *capture_ = nullptr;
+  static inline Config config_;
+  static inline struct sockaddr_in video_client_addr_{};
+  static inline Tasks tasks_;
+  static inline std::unique_ptr<CmdProcessor> cmd_processor_;
+  static inline std::unique_ptr<RTPPacketizer> rtp_packetizer_;
 };
-
-// Static member initialization
-
-std::atomic<bool> UDPH264Streamer::stream_active_ = false;
-const char *UDPH264Streamer::TAG = "UDP_H264";
-TaskHandle_t UDPH264Streamer::data_task_handle_ = nullptr;
-TaskHandle_t UDPH264Streamer::control_task_handle_ = nullptr;
-bool UDPH264Streamer::is_running_ = false;
-struct sockaddr_in UDPH264Streamer::video_client_addr_ = {};
-V4L2H264Capture *UDPH264Streamer::capture_ = nullptr;
-UDPH264Streamer::Config UDPH264Streamer::config_ = {};
-CmdProcessor *UDPH264Streamer::cmd_processor_ = nullptr;
-RTPPacketizer *UDPH264Streamer::rtp_packetizer_ = nullptr;

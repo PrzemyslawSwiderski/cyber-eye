@@ -48,12 +48,6 @@ object CameraClient {
     }
 
     suspend fun startVideo() = withContext(Dispatchers.IO) {
-        // stop any existing stream
-        sendCommand(
-            "stop",
-            controlSocket
-        )
-
         val freshVideoSocket = resetVideoSocket()
         sendCommand(
             "start",

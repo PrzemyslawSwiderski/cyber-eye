@@ -23,7 +23,6 @@ object CameraInfoManager {
                 try {
                     CameraClient.fetchCameraInfo()
                 } catch (e: Exception) {
-                    // Handle error (e.g., log it)
                     Log.e("StatsManager", "Failed to fetch stats", e)
                 }
                 delay(FETCH_PERIOD_MS)

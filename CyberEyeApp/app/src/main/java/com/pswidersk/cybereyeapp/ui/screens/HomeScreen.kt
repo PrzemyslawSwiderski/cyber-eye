@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.pswidersk.cybereyeapp.ui.components.CameraRebootSection
 import com.pswidersk.cybereyeapp.ui.components.CameraStatusSection
 import com.pswidersk.cybereyeapp.ui.components.IpConnectionSection
+import com.pswidersk.cybereyeapp.ui.components.MusicControlSection
 import com.pswidersk.cybereyeapp.ui.components.WifiSection
 
 @Composable
@@ -81,7 +82,13 @@ fun HomeScreen(
                     fontSize = 11.sp,
                     color = Color.Gray
                 )
-                
+
+                Spacer(Modifier.height(16.dp))
+
+                CameraStatusSection()
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
                 Spacer(Modifier.height(16.dp))
 
                 WifiSection()
@@ -90,7 +97,7 @@ fun HomeScreen(
                 HorizontalDivider()
                 Spacer(Modifier.height(16.dp))
 
-                CameraStatusSection()
+                MusicControlSection()
 
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
