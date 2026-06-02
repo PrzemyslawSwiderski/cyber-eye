@@ -162,9 +162,9 @@ public:
 private:
   static const char *TAG;
   static constexpr const char *H264_DEVICE_PATH = "/dev/video11";
-  static constexpr int BUFFER_COUNT = 2;
-  static constexpr int ENCODER_BUFFER_COUNT = 3;
-  static constexpr int FRAME_TIMEOUT_MS = 2;
+  static constexpr int BUFFER_COUNT = 3;
+  static constexpr int ENCODER_BUFFER_COUNT = 5;
+  static constexpr int FRAME_TIMEOUT_MS = 5;
 
   Config config_;
   int capture_fd_ = -1, encoding_fd_ = -1;

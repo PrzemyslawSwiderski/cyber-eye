@@ -29,8 +29,8 @@ struct UDPH264StreamerConfig
   uint16_t control_port = 3334;
 
   // Task settings
-  int task_priority = 20;
-  int task_stack_size = 8 * 1024;
+  int stream_task_priority = 20;
+  int stream_task_stack_size = 16 * 1024;
   int control_task_stack_size = 4 * 1024;
 };
 
@@ -43,7 +43,6 @@ struct UDPH264StreamerTasks
 class UDPH264Streamer
 {
 public:
-  static constexpr int SEND_MAX_RETRIES = 5;
   static constexpr int TOS_LOW_DELAY = 0xB8; // AF (Assured Forwarding)
 
   using Config = UDPH264StreamerConfig;
@@ -105,7 +104,7 @@ private:
     // Create control task with higher priority
     BaseType_t ret = xTaskCreatePinnedToCore(
         controlTask, "udp_control", config_.control_task_stack_size,
-        nullptr, config_.task_priority + 1, &tasks_.control, 1);
+        nullptr, config_.stream_task_priority + 1, &tasks_.control, 1);
 
     if (ret != pdPASS)
     {
@@ -115,8 +114,8 @@ private:
 
     // Create data task
     ret = xTaskCreatePinnedToCore(
-        dataTask, "udp_data", config_.task_stack_size,
-        nullptr, config_.task_priority, &tasks_.data, 1);
+        dataTask, "udp_stream", config_.stream_task_stack_size,
+        nullptr, config_.stream_task_priority, &tasks_.data, 1);
 
     if (ret != pdPASS)
     {
@@ -213,29 +212,23 @@ private:
   static bool sendPacket(int sock, const std::vector<uint8_t> &packet,
                          const struct sockaddr_in &dest, size_t index, size_t total)
   {
-    int retries = 0;
+    int sent = sendto(sock, packet.data(), packet.size(), 0,
+                      (const struct sockaddr *)&dest, sizeof(dest));
 
-    while (retries <= SEND_MAX_RETRIES)
+    if (sent > 0)
+      return true;
+
+    if (errno == ENOMEM || errno == ENOBUFS)
     {
-      int sent = sendto(sock, packet.data(), packet.size(), 0,
-                        (const struct sockaddr *)&dest, sizeof(dest));
-
-      if (sent > 0)
-        return true;
-
-      if (errno == ENOMEM || errno == ENOBUFS)
-      {
-        taskYIELD();
-        retries++;
-      }
-      else
-      {
-        ESP_LOGE(TAG, "Send error (packet %zu/%zu): errno=%d", index + 1, total, errno);
-        return false;
-      }
+      ESP_LOGW(TAG, "Send buffer full, dropping packet %zu/%zu", index + 1, total);
+      taskYIELD();
+    }
+    else
+    {
+      ESP_LOGE(TAG, "Send error (packet %zu/%zu): errno=%d", index + 1, total, errno);
+      return false;
     }
 
-    ESP_LOGE(TAG, "Dropped packet %zu/%zu after %d retries", index + 1, total, SEND_MAX_RETRIES);
     return false;
   }
 
@@ -266,6 +259,10 @@ private:
     rtp_packetizer_->resetSequence();
     ESP_LOGI(TAG, "Data task started");
 
+    // FPS tracking variables
+    uint32_t frame_count = 0;
+    TickType_t last_time = xTaskGetTickCount();
+
     while (is_running_)
     {
       if (!stream_active_)
@@ -281,6 +278,7 @@ private:
       if (capture_->captureFrame(frame_data, frame_size, sequence))
       {
         sendFrame(sock, frame_data, frame_size, video_client_addr_);
+        frame_count++;
       }
       else
       {
@@ -289,6 +287,15 @@ private:
         capture_ = new V4L2H264Capture({});
         initializeCapture();
         vTaskDelay(pdMS_TO_TICKS(10));
+      }
+
+      // Log FPS every second
+      TickType_t now = xTaskGetTickCount();
+      if ((now - last_time) >= pdMS_TO_TICKS(1000))
+      {
+        ESP_LOGI(TAG, "FPS: %lu", frame_count);
+        frame_count = 0;
+        last_time = now;
       }
     }
 
