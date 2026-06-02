@@ -24,8 +24,11 @@ class V4L2H264Capture;
 // Define structs outside the class to avoid initialization order issues
 struct UDPH264StreamerConfig
 {
+  // Network settings
   uint16_t data_destination_port = 59227;
   uint16_t control_port = 3334;
+
+  // Task settings
   int task_priority = 20;
   int task_stack_size = 8 * 1024;
   int control_task_stack_size = 4 * 1024;
@@ -46,7 +49,7 @@ public:
   using Config = UDPH264StreamerConfig;
   using Tasks = UDPH264StreamerTasks;
 
-  static esp_err_t start(V4L2H264Capture *capture, const Config &config)
+  static esp_err_t start(const Config &config = Config())
   {
     if (is_running_)
     {
@@ -54,16 +57,16 @@ public:
       return ESP_ERR_INVALID_STATE;
     }
 
-    if (!capture)
-    {
-      ESP_LOGE(TAG, "Invalid capture device");
-      return ESP_ERR_INVALID_ARG;
-    }
-
-    capture_ = capture;
     config_ = config;
     video_client_addr_ = {};
     stream_active_ = false;
+
+    capture_ = new V4L2H264Capture({});
+    if (!capture_)
+    {
+      ESP_LOGE(TAG, "Failed to create capture device");
+      return ESP_ERR_NO_MEM;
+    }
 
     // Initialize components
     cmd_processor_ = std::make_unique<CmdProcessor>();
@@ -132,6 +135,30 @@ private:
     rtp_packetizer_.reset();
     tasks_.data = nullptr;
     tasks_.control = nullptr;
+  }
+
+  static bool initializeCapture()
+  {
+    if (!capture_)
+      return false;
+
+    ESP_LOGI(TAG, "Initializing video capture...");
+
+    if (capture_->init() != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to initialize capture device");
+      return false;
+    }
+
+    if (capture_->start() != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to start capture");
+      capture_->stop();
+      return false;
+    }
+
+    ESP_LOGI(TAG, "Video capture initialized successfully");
+    return true;
   }
 
   static int createAndConfigureSocket(uint16_t port = 0, bool bind_socket = false)
@@ -227,7 +254,8 @@ private:
       return;
     }
 
-    if (capture_->init() != ESP_OK || capture_->start() != ESP_OK)
+    // Initialize capture at start
+    if (!initializeCapture())
     {
       ESP_LOGE(TAG, "Failed to start video capture");
       close(sock);
@@ -256,6 +284,10 @@ private:
       }
       else
       {
+        ESP_LOGW(TAG, "Capture failed");
+        delete capture_;
+        capture_ = new V4L2H264Capture({});
+        initializeCapture();
         vTaskDelay(pdMS_TO_TICKS(10));
       }
     }

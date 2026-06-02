@@ -39,25 +39,11 @@ extern "C" void app_main(void)
 
   auto ip = wifi::get_ip();
 
-  // Configure video capture
-  V4L2H264Capture::Config capture_config;
-  capture_config.capture_device = "/dev/video0";
-
-  // I-frame Interval (default: 12)
-  capture_config.i_period = 30;
-  // 0 to 51 (where 0 is near-perfect/lossless quality and 51 is the worst quality)
-  capture_config.quality = 46;
-  // Exposure (default: 90)
-  capture_config.exposure = 80;
-
-  // Initialize capture (but don't start streaming yet)
-  V4L2H264Capture capture(capture_config);
-
   // Configure UDP streamer
   UDPH264Streamer::Config streamer_config = {};
 
   // Start streamer (waits for client commands)
-  if (UDPH264Streamer::start(&capture, streamer_config) != ESP_OK)
+  if (UDPH264Streamer::start(streamer_config) != ESP_OK)
   {
     ESP_LOGE(TAG, "Failed to start streamer");
     return;
