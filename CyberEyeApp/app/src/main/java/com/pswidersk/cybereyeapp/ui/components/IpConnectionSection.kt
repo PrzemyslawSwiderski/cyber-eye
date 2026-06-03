@@ -29,6 +29,8 @@ fun IpConnectionSection() {
     val focusManager = LocalFocusManager.current
     var ipInput by remember { AppState.cameraIp }
 
+    SectionTitle("Ip Connection")
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,

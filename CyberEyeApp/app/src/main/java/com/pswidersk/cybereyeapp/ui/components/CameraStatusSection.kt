@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.pswidersk.cybereyeapp.AppState
 import com.pswidersk.cybereyeapp.CameraClient
 import com.pswidersk.cybereyeapp.model.CameraStatus
+import com.pswidersk.cybereyeapp.ui.theme.CyberRed
 import kotlinx.coroutines.launch
 
 @Composable
@@ -59,7 +60,7 @@ fun CameraStatusSection() {
             Text(
                 text = cameraInfo.lastError,
                 fontSize = 12.sp,
-                color = Color(0xFFC62828),
+                color = CyberRed,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -73,8 +74,7 @@ fun CameraStatusSection() {
                     coroutineScope.launch {
                         CameraClient.sendCommand("clear_error")
                     }
-                },
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Yellow)
+                }
             ) {
                 Text("Clear")
             }

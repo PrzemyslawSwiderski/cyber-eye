@@ -18,7 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.pswidersk.cybereyeapp.AppState
 import com.pswidersk.cybereyeapp.CameraClient
 import com.pswidersk.cybereyeapp.TAG
+import com.pswidersk.cybereyeapp.ui.theme.CyberGreenLight
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Colors.background
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.labelSize
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.titleSize
@@ -49,51 +51,51 @@ fun ControlPanel() {
             AppState.requestVideoReload()
         }
     }
-
-    Column(
-        modifier = Modifier
-            .width(700.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(background)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+    Surface(
+        color = background,
+        contentColor = Color.White
     ) {
-        OverlayHeader()
-
-        ControlSlider(
-            icon = "☀️",
-            label = "Exposure",
-            value = settings.exposure,
-            onValueChange = { AppState.updateExposure(it) },
-            valueRange = 2f..235f
-        )
-
-        ControlSlider(
-            icon = "📊",
-            label = "Quality",
-            value = settings.quality,
-            onValueChange = { AppState.updateQuality(it) },
-            valueRange = 0f..51f
-        )
-        QualityLevelIndicator(quality = settings.quality)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = { sendUpdateCommand() },
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2196F3),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(8.dp)
+                .width(700.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(background)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Text(
-                text = "Apply Settings",
-                fontSize = labelSize
+            OverlayHeader()
+
+            ControlSlider(
+                icon = "☀️",
+                label = "Exposure",
+                value = settings.exposure,
+                onValueChange = { AppState.updateExposure(it) },
+                valueRange = 2f..235f
             )
+
+            ControlSlider(
+                icon = "📊",
+                label = "Quality",
+                value = settings.quality,
+                onValueChange = { AppState.updateQuality(it) },
+                valueRange = 0f..51f
+            )
+            QualityLevelIndicator(quality = settings.quality)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            FilledTonalButton(
+                onClick = { sendUpdateCommand() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Apply Settings",
+                    fontSize = labelSize
+                )
+            }
         }
     }
 }
@@ -107,7 +109,6 @@ fun OverlayHeader() {
     ) {
         Text(
             text = "Controls",
-            color = Color.White,
             fontSize = titleSize,
         )
     }
@@ -130,31 +131,7 @@ fun QualityLevelIndicator(quality: Float) {
                 in 31..40 -> "Low quality"
                 else -> "Lowest quality — best performance"
             },
-            color = Color.Cyan,
-            fontSize = labelSize,
-        )
-    }
-}
-
-@Composable
-fun BitrateLevelIndicator(bitrate: Float) {
-    AnimatedContent(
-        targetState = bitrate.toInt(),
-        transitionSpec = {
-            fadeIn() + slideInHorizontally() togetherWith
-                    fadeOut() + slideOutHorizontally()
-        }
-    ) { level ->
-        Text(
-            text = when (level) {
-                in 0..1000 -> "Very low bandwidth"
-                in 1001..3000 -> "Low bandwidth"
-                in 3001..6000 -> "Standard quality"
-                in 6001..10000 -> "HD quality"
-                in 10001..15000 -> "Full HD quality"
-                else -> "Ultra HD quality"
-            },
-            color = Color.Cyan,
+            color = CyberGreenLight,
             fontSize = labelSize,
         )
     }

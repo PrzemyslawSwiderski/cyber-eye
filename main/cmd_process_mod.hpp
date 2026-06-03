@@ -146,6 +146,7 @@ private:
 
   void handleCamera(const char *cmd, const Context &ctx)
   {
+    ctx.stream_active->store(false);
     if (!ctx.capture)
     {
       last_error_ = "camera not available";
@@ -170,6 +171,7 @@ private:
       config.exposure = exposure;
 
     ctx.capture->updateConfig(config);
+    ctx.stream_active->store(true);
   }
 
   void handleMusicPlay(const char *cmd, const Context &ctx)

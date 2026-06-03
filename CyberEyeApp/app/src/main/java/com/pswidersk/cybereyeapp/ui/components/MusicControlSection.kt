@@ -27,11 +27,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pswidersk.cybereyeapp.CameraClient
+import com.pswidersk.cybereyeapp.ui.theme.CyberGreenLight
+import com.pswidersk.cybereyeapp.ui.theme.CyberRed
 import kotlinx.coroutines.launch
 
 @Composable
@@ -47,23 +48,7 @@ fun MusicControlSection() {
             .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Favorite,
-                contentDescription = "Music",
-                modifier = Modifier.height(20.dp),
-                tint = Color(0xFF1B65D9)
-            )
-            Text(
-                text = "Music Control",
-                fontSize = 14.sp,
-                fontWeight = Bold
-            )
-        }
+        SectionTitle("Music Control")
 
         OutlinedTextField(
             value = recordName,
@@ -85,10 +70,7 @@ fun MusicControlSection() {
                         isPlaying = true
                     }
                 },
-                enabled = !isPlaying,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color(0xFF4CCB4E)
-                )
+                enabled = !isPlaying
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
@@ -108,7 +90,7 @@ fun MusicControlSection() {
                 },
                 enabled = isPlaying,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color(0xFFC62828)
+                    containerColor = CyberRed
                 )
             ) {
                 Icon(
@@ -150,7 +132,7 @@ fun MusicControlSection() {
         Text(
             text = if (isPlaying) "▶ Playing..." else "■ Stopped",
             fontSize = 12.sp,
-            color = if (isPlaying) Color(0xFF4CCB4E) else Color.Gray
+            color = if (isPlaying) CyberRed else CyberGreenLight
         )
     }
 }

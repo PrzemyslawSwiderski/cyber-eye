@@ -23,11 +23,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pswidersk.cybereyeapp.ui.components.CameraHeaderSection
 import com.pswidersk.cybereyeapp.ui.components.CameraRebootSection
 import com.pswidersk.cybereyeapp.ui.components.CameraStatusSection
 import com.pswidersk.cybereyeapp.ui.components.IpConnectionSection
 import com.pswidersk.cybereyeapp.ui.components.MusicControlSection
+import com.pswidersk.cybereyeapp.ui.components.SectionDivider
 import com.pswidersk.cybereyeapp.ui.components.WifiSection
+import com.pswidersk.cybereyeapp.ui.theme.CyberGreenLight
 
 @Composable
 fun HomeScreen(
@@ -55,53 +58,17 @@ fun HomeScreen(
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    "Cyber Eye", style = MaterialTheme.typography.titleLarge,
-                    fontWeight = Bold,
-                    color = Color(0xFF21A821)
-                )
-                Spacer(Modifier.height(16.dp))
+                CameraHeaderSection(onShowVideoClick)
+                SectionDivider()
 
                 IpConnectionSection()
-
-                Spacer(Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        onShowVideoClick()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Show Video Stream")
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                Text(
-                    "Camera must be on the same network",
-                    fontSize = 11.sp,
-                    color = Color.Gray
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                CameraStatusSection()
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
+                SectionDivider()
 
                 WifiSection()
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
+                SectionDivider()
 
                 MusicControlSection()
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
+                SectionDivider()
 
                 CameraRebootSection()
             }

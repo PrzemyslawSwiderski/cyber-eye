@@ -25,13 +25,12 @@ class V4L2H264Capture;
 struct UDPH264StreamerConfig
 {
   // Network settings
-  uint16_t data_destination_port = 59227;
   uint16_t control_port = 3334;
 
   // Task settings
   int stream_task_priority = 20;
-  int stream_task_stack_size = 16 * 1024;
-  int control_task_stack_size = 4 * 1024;
+  int stream_task_stack_size = 32 * 1024;
+  int control_task_stack_size = 16 * 1024;
 };
 
 struct UDPH264StreamerTasks
@@ -284,9 +283,11 @@ private:
       {
         ESP_LOGW(TAG, "Capture failed");
         delete capture_;
+        vTaskDelay(pdMS_TO_TICKS(100));
         capture_ = new V4L2H264Capture({});
+        vTaskDelay(pdMS_TO_TICKS(100));
         initializeCapture();
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(200));
       }
 
       // Log FPS every second

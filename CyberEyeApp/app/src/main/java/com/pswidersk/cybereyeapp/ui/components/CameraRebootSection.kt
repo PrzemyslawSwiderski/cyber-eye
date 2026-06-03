@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.pswidersk.cybereyeapp.CameraClient
+import com.pswidersk.cybereyeapp.ui.theme.CyberRed
 import kotlinx.coroutines.launch
 
 @Composable
@@ -41,7 +42,7 @@ fun CameraRebootSection() {
                             CameraClient.sendCommand("reboot")
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    colors = ButtonDefaults.buttonColors(containerColor = CyberRed)
                 ) {
                     Text("Reboot")
                 }
@@ -57,7 +58,7 @@ fun CameraRebootSection() {
     Button(
         onClick = { showDialog = true },
         modifier = Modifier.width(200.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
+        colors = ButtonDefaults.buttonColors(containerColor = CyberRed)
     ) {
         Icon(
             imageVector = Icons.Default.Refresh,
