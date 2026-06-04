@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.pswidersk.cybereyeapp.ui.components.CameraHeaderSection
 import com.pswidersk.cybereyeapp.ui.components.CameraRebootSection
 import com.pswidersk.cybereyeapp.ui.components.CameraStatusSection
+import com.pswidersk.cybereyeapp.ui.components.FilesSection
 import com.pswidersk.cybereyeapp.ui.components.IpConnectionSection
 import com.pswidersk.cybereyeapp.ui.components.MusicControlSection
 import com.pswidersk.cybereyeapp.ui.components.SectionDivider
@@ -68,6 +69,9 @@ fun HomeScreen(
                 SectionDivider()
 
                 MusicControlSection()
+                SectionDivider()
+
+                FilesSection()
                 SectionDivider()
 
                 CameraRebootSection()

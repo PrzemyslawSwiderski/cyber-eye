@@ -48,7 +48,6 @@ fun ControlSlider(
 
             Text(
                 text = "$label:",
-                color = Color.White,
                 fontSize = labelSize,
                 modifier = Modifier.width(90.dp)
             )
@@ -68,7 +67,6 @@ fun ControlSlider(
 
             Text(
                 text = displayValue,
-                color = Color.White,
                 fontSize = valueSize,
                 modifier = Modifier.width(50.dp)
             )

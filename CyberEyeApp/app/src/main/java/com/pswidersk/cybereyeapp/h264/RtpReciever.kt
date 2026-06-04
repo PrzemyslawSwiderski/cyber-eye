@@ -2,7 +2,7 @@ package com.pswidersk.cybereyeapp.h264
 
 import android.util.Log
 import com.pswidersk.cybereyeapp.AppState
-import com.pswidersk.cybereyeapp.CameraClient
+import com.pswidersk.cybereyeapp.client.CameraClient
 import com.pswidersk.cybereyeapp.TAG
 import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket

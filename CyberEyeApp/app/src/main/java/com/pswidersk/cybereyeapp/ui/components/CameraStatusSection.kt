@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,7 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pswidersk.cybereyeapp.AppState
-import com.pswidersk.cybereyeapp.CameraClient
+import com.pswidersk.cybereyeapp.client.CameraClient
 import com.pswidersk.cybereyeapp.model.CameraStatus
 import com.pswidersk.cybereyeapp.ui.theme.CyberRed
 import kotlinx.coroutines.launch

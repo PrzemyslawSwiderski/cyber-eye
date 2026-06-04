@@ -18,9 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.pswidersk.cybereyeapp.CameraClient
+import com.pswidersk.cybereyeapp.client.CameraClient
 import com.pswidersk.cybereyeapp.ui.theme.CyberRed
 import kotlinx.coroutines.launch
 

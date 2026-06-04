@@ -1,6 +1,7 @@
 package com.pswidersk.cybereyeapp
 
 import android.util.Log
+import com.pswidersk.cybereyeapp.client.CameraClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

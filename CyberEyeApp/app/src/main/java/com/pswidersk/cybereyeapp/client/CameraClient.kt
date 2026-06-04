@@ -1,7 +1,10 @@
-package com.pswidersk.cybereyeapp
+package com.pswidersk.cybereyeapp.client
 
 import android.util.Log
+import com.pswidersk.cybereyeapp.AppState
 import com.pswidersk.cybereyeapp.AppState.cameraIp
+import com.pswidersk.cybereyeapp.CONTROL_PORT
+import com.pswidersk.cybereyeapp.TAG
 import com.pswidersk.cybereyeapp.model.CameraInfoResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

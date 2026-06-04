@@ -14,7 +14,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CyberEyeApp">
+        android:theme="@style/Theme.CyberEyeApp"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
@@ -27,8 +28,7 @@
 
         <activity
             android:name=".VideoActivity"
-            android:exported="false"
-            android:theme="@style/Theme.CyberEyeApp" />
+            android:exported="false" />
 
     </application>
 </manifest>

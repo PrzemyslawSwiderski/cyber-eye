@@ -11,12 +11,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pswidersk.cybereyeapp.ui.theme.CyberGreen
 
 @Composable
 fun CameraHeaderSection(onShowVideoClick: () -> Unit) {
     Text(
-        "Cyber Eye", style = MaterialTheme.typography.titleLarge,
+        "Cyber Eye",
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = Bold,
+        color = CyberGreen
     )
 
     Spacer(Modifier.height(16.dp))
@@ -27,7 +30,7 @@ fun CameraHeaderSection(onShowVideoClick: () -> Unit) {
         },
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text("Show Video Stream")
+        Text("Show Video Stream", fontWeight = Bold)
     }
 
     Spacer(Modifier.height(7.dp))

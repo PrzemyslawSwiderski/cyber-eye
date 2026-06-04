@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,8 +29,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.pswidersk.cybereyeapp.AppState
-import com.pswidersk.cybereyeapp.CameraClient
 import com.pswidersk.cybereyeapp.TAG
+import com.pswidersk.cybereyeapp.client.CameraClient
 import com.pswidersk.cybereyeapp.ui.theme.CyberGreenLight
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Colors.background
 import com.pswidersk.cybereyeapp.ui.theme.VideoOverlayTheme.Fonts.labelSize
