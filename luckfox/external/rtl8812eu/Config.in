@@ -1,4 +1,5 @@
 config BR2_PACKAGE_RTL8812EU
     bool "rtl8812eu"
+    depends on BR2_LINUX_KERNEL
     help
-      RTL8812EU WiFi driver for BL-M8812EU2 module.
+      RTL8812EU WiFi driver

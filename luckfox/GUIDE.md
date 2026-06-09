@@ -50,6 +50,10 @@ iface luckfox0 inet static
 This way the IP is assigned automatically on every reconnect without needing to run ip addr add manually.
 
 
+### USB mode
+
+`cat /sys/devices/platform/ff3e0000.usb2-phy/otg_mode`
+
 ## Connect by telnet
 
 `telnet 172.32.0.93`
@@ -69,16 +73,19 @@ Build with docker:
 
 Start an instance with pseudo-TTY:
 ```sh
-sudo docker run -it --name luckfox \
-      -v /home/pswidersk/REPOS/cyber-eye/luckfox/overlay:/opt/overlay \
-      -v /home/pswidersk/REPOS/luckfox-pico:/home \
-      -v /home/pswidersk/REPOS/cyber-eye/luckfox/external:/home/external \
+sudo docker run -it --privileged --name luckfox \
+      -v /home/pswidersk/REPOS/luckfox-pico:/home/ \
+      -v /home/pswidersk/REPOS/cyber-eye/luckfox/overlay:/home/project/cfg/BoardConfig_IPC/overlay/custom-overlay \
       luckfoxtech/luckfox_pico:1.0 /bin/bash
 ```
 
 If the container already exists, you can restart it using the following command:
+
 `sudo docker start -ai luckfox`
 
+or remove with:
+
+`sudo docker container rm luckfox`
 
 Build SDK:
 ```sh
@@ -87,10 +94,41 @@ cd /home
 ./build.sh 
 ```
 
+## Run the build process to generate a rootfs.img that includes the overlay content.`
+`./build.sh firmware`
+
 Flashing:
 
 https://wiki.luckfox.com/Luckfox-Pico-Plus-Mini/Flash-image#51-flashing-image-to-spi-nand-flash
 
+
+## Cross compile BL-M8812EU2 [driver](https://github.com/svpcom/rtl8812eu/)
+
+Driver code was placed in `/home/sysdrv/drv_ko/wifi/rtl8812eu`
+```sh
+./build.sh driver
+```
+
+## Flashing https://wiki.luckfox.com/Luckfox-Pico-Plus-Mini/Flash-image
+
+In Luckfox:
+```sh
+reboot loader
+```
+OR
+
+The Hardware Bypass (Step-by-Step)
+1. Unplug the USB cable from your Luckfox Pico Mini so it is completely powered off.
+2. Locate the physical BOOT button on the board.
+3. Press and hold that BOOT button down.
+4. While keeping the button pressed, plug the USB cable back into your PC.
+5. Give it about 2 to 3 seconds, then release the button.
+
+
+In Ubuntu:
+```sh
+sudo ./rkflash.sh update
+```
 
 
 ## Ubuntu
