@@ -61,9 +61,25 @@ This way the IP is assigned automatically on every reconnect without needing to 
 Initial Login: root
 Password: luckfox
 
+## Find any files
+
+`find / -name "RkLunch.sh" 2>/dev/null`
+
 ## Video view
 
+Stream from Luckfox:
+```sh
+/oem/usr/bin/RkLunch.sh
+
+ffmpeg -f v4l2 -framerate 30 -video_size 1280x720 -i /dev/video0 -c:v h264 -f rtp "rtp://192.168.1.12:5600"
+```
+
+
+USB network:
 `ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -rtsp_transport tcp rtsp://172.32.0.93:554/live/0`
+
+Nju network:
+`ffplay -fflags nobuffer -flags low_delay -framedrop -strict experimental -rtsp_transport tcp rtsp://192.168.1.15:554/live/0`
 
 ## Build image
 
@@ -107,6 +123,27 @@ https://wiki.luckfox.com/Luckfox-Pico-Plus-Mini/Flash-image#51-flashing-image-to
 Driver code was placed in `/home/sysdrv/drv_ko/wifi/rtl8812eu`
 ```sh
 ./build.sh driver
+```
+
+
+Load the build driver inside Luckfox chip
+```
+insmod cfg80211.ko
+insmod 8812eu.ko
+```
+
+Save new network config:
+```
+network={
+     ssid="myssid"
+     psk="12345678"
+}
+```
+in `/etc/wpa_supplicant.conf` file.
+
+connect to network:
+```
+wpa_supplicant -D nl80211 -c /etc/wpa_supplicant.conf -i wlan0
 ```
 
 ## Flashing https://wiki.luckfox.com/Luckfox-Pico-Plus-Mini/Flash-image
