@@ -1,0 +1,42 @@
+#!/bin/sh
+[ -f /etc/profile.d/RkEnv.sh ] && source /etc/profile.d/RkEnv.sh
+
+FIFO=/tmp/venc.h264
+VENC_PIDFILE=/var/run/venc.pid
+APP_PIDFILE=/var/run/cuber-eye.pid
+
+case $1 in
+
+start)
+	echo "Starting Cyber App..."
+
+	# Setting calibration params
+	v4l2-ctl -d /dev/v4l-subdev2 --set-ctrl=exposure=700,analogue_gain=7700,horizontal_flip=1,vertical_flip=1
+
+	if [ -p "$FIFO" ]; then
+		: # already a fifo, fine
+	elif [ -e "$FIFO" ]; then
+		rm -f "$FIFO"
+		mkfifo "$FIFO"
+	else
+		mkfifo "$FIFO"
+	fi
+
+	# start python reader first so the fifo open() doesn't block forever
+	python /cyber-eye/app.py &
+	echo $! >"$APP_PIDFILE"
+
+	simple_vi_bind_venc -I 1 -w 1920 -h 1080 -e h264 -o "$FIFO" &
+	echo $! >"$VENC_PIDFILE"
+	;;
+
+stop)
+	echo "Stopping Cyber App..."
+	[ -f "$VENC_PIDFILE" ] && kill "$(cat $VENC_PIDFILE)" 2>/dev/null && rm -f "$VENC_PIDFILE"
+	[ -f "$APP_PIDFILE" ] && kill "$(cat $APP_PIDFILE)" 2>/dev/null && rm -f "$APP_PIDFILE"
+	;;
+
+*)
+	exit 1
+	;;
+esac

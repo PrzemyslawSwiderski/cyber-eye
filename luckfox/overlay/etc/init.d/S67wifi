@@ -1,0 +1,14 @@
+#!/bin/sh
+case "$1" in
+start)
+	echo "Initializing WiFi..."
+	insmod /lib/modules/cfg80211.ko
+	insmod /lib/modules/8812eu.ko
+	wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant.conf
+	;;
+stop)
+	echo "Stopping WiFi..."
+	killall wpa_supplicant
+	ip link set wlan0 down
+	;;
+esac

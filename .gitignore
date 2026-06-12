@@ -8,3 +8,5 @@ build
 secrets.h
 secrets.hpp
 http/wifi.http
+
+luckfox/overlay/etc/wpa_supplicant.conf
